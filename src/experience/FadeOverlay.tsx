@@ -1,0 +1,24 @@
+interface FadeOverlayProps {
+  opacity: number;
+}
+
+export default function FadeOverlay({ opacity }: FadeOverlayProps) {
+  console.log("FadeOverlay rendering with opacity:", opacity);
+  return (
+    <div
+      style={{
+        position: "fixed",
+        top: 0,
+        left: 0,
+        width: "100%",
+        height: "100%",
+        backgroundColor: "black",
+        opacity: Math.max(0, Math.min(1, opacity)),
+        pointerEvents: opacity > 0.01 ? "auto" : "none",
+        zIndex: 500,
+        transition: "none",
+      }}
+      data-testid="fade-overlay"
+    />
+  );
+}
