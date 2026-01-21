@@ -10,23 +10,23 @@ type ChapterPose = {
 const chapterPoses: Record<number, ChapterPose> = {
   1: { rig: [0, 0, 5], target: [0, 0, 0] },
   2: { rig: [0, 0, 7], target: [0, 0, 0] },
-  3: { rig: [0, 0, 5], target: [0, 0, 0] },
+  3: { rig: [0, 0, 1], target: [0, 0, 0] },
   4: { rig: [0, 0, 5], target: [0, 0, 0] },
 };
 
-export default function CameraRig({ chapter }: { chapter: number }) {
+export default function CameraRig({ sceneIndex }: { sceneIndex: number }) {
   const { camera } = useThree();
   const rig = useRef<Group>(null);
   const target = useRef<Group>(null);
 
   useEffect(() => {
-    const pose = chapterPoses[chapter] ?? chapterPoses[1];
+    const pose = chapterPoses[sceneIndex] ?? chapterPoses[1];
     if (rig.current) rig.current.position.set(...pose.rig);
     if (target.current) target.current.position.set(...pose.target);
     camera.position.set(...pose.rig);
     camera.lookAt(...pose.target);
     camera.updateProjectionMatrix();
-  }, [camera, chapter]);
+  }, [camera, sceneIndex]);
 
   return (
     <>

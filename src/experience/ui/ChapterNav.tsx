@@ -1,55 +1,159 @@
+import type { Part } from "../parts";
+import "./ChapterNav.css";
+
 interface ChapterNavProps {
-  currentChapter: number;
-  onChapterChange: (chapter: number) => void;
+  parts: Part[];
+  activePartIndex: number;
+  activeChapterIndex: number;
+  onSelectionChange: (partIndex: number, chapterIndex: number) => void;
 }
 
-export default function ChapterNav({ currentChapter, onChapterChange }: ChapterNavProps) {
+function FancyButton({
+  label,
+  onClick,
+  disabled,
+}: {
+  label: string;
+  onClick: () => void;
+  disabled?: boolean;
+}) {
   return (
-    <div
-      style={{
-        position: "fixed",
-        bottom: "2rem",
-        left: "50%",
-        transform: "translateX(-50%)",
-        display: "flex",
-        gap: "1rem",
-        zIndex: 1000,
-      }}
-    >
-      {[1, 2, 3, 4].map((chapter) => (
-        <div
-          key={chapter}
-          className="relative inline-flex items-center justify-center gap-4 group"
+    <button type="button" className="button" onClick={onClick} disabled={disabled}>
+      <span className="fold" />
+
+      <div className="points_wrapper" aria-hidden="true">
+        {Array.from({ length: 10 }).map((_, i) => (
+          <i key={i} className="point" />
+        ))}
+      </div>
+
+      <span className="inner">
+        <svg
+          className="icon"
+          fill="none"
+          stroke="currentColor"
+          viewBox="0 0 24 24"
+          xmlns="http://www.w3.org/2000/svg"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth="2.5"
+          aria-hidden="true"
+          focusable="false"
         >
-          <div className="absolute inset-0 duration-1000 opacity-60 transition-all bg-gradient-to-r from-indigo-500 via-pink-500 to-yellow-400 rounded-xl blur-lg filter group-hover:opacity-100 group-hover:duration-200" />
-          <button
-            type="button"
-            role="button"
-            title={`Chapter ${chapter}`}
-            onClick={() => onChapterChange(chapter)}
-            className="group relative inline-flex items-center justify-center text-base rounded-xl bg-gray-900 px-8 py-3 font-semibold text-white transition-all duration-200 hover:bg-gray-800 hover:shadow-lg hover:-translate-y-0.5 hover:shadow-gray-600/30"
+          <polyline points="13.18 1.37 13.18 9.64 21.45 9.64 10.82 22.63 10.82 14.36 2.55 14.36 13.18 1.37" />
+        </svg>
+        {label}
+      </span>
+    </button>
+  );
+}
+
+export default function ChapterNav({
+  parts,
+  activePartIndex,
+  activeChapterIndex,
+  onSelectionChange,
+}: ChapterNavProps) {
+  const activePart = parts[activePartIndex];
+  const activeChapters = activePart?.chapters ?? [];
+  const canPrevPart = activePartIndex > 0;
+  const canNextPart = activePartIndex < parts.length - 1;
+  const canPrevChapter = activeChapterIndex > 0;
+  const canNextChapter = activeChapterIndex < activeChapters.length - 1;
+
+  return (
+    <div className="chapterNav">
+      <div className="chapterNavButtonRow">
+        <FancyButton
+          label="Prev Part"
+          disabled={!canPrevPart}
+          onClick={() => onSelectionChange(activePartIndex - 1, 0)}
+        />
+        <FancyButton
+          label="Next Part"
+          disabled={!canNextPart}
+          onClick={() => onSelectionChange(activePartIndex + 1, 0)}
+        />
+      </div>
+
+      <label className="chapterNavLabel">
+        Part
+        <span className="chapterNavSelectWrap">
+          <select
+            value={activePartIndex}
+            onChange={(e) => {
+              const nextPart = Number(e.target.value);
+              onSelectionChange(nextPart, 0);
+            }}
+            className="chapterNavSelect"
+            aria-label="Part"
           >
-            Chapter {chapter}
-            <svg
-              aria-hidden="true"
-              viewBox="0 0 10 10"
-              height="10"
-              width="10"
-              fill="none"
-              className="mt-0.5 ml-2 -mr-1 stroke-white stroke-2"
-            >
-              <path
-                d="M0 5h7"
-                className="transition opacity-0 group-hover:opacity-100"
-              />
-              <path
-                d="M1 1l4 4-4 4"
-                className="transition group-hover:translate-x-[3px]"
-              />
-            </svg>
-          </button>
-        </div>
-      ))}
+            {parts.map((part, index) => (
+              <option key={part.title} value={index}>
+                {`Part ${index + 1}: ${part.title}`}
+              </option>
+            ))}
+          </select>
+          <svg
+            className="chapterNavSelectChevron"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <polyline points="6 9 12 15 18 9" />
+          </svg>
+        </span>
+      </label>
+
+      <div className="chapterNavButtonRow">
+        <FancyButton
+          label="Prev Chapter"
+          disabled={!canPrevChapter}
+          onClick={() => onSelectionChange(activePartIndex, activeChapterIndex - 1)}
+        />
+        <FancyButton
+          label="Next Chapter"
+          disabled={!canNextChapter}
+          onClick={() => onSelectionChange(activePartIndex, activeChapterIndex + 1)}
+        />
+      </div>
+
+      <label className="chapterNavLabel">
+        Chapter
+        <span className="chapterNavSelectWrap">
+          <select
+            value={activeChapterIndex}
+            onChange={(e) => {
+              const nextChapter = Number(e.target.value);
+              onSelectionChange(activePartIndex, nextChapter);
+            }}
+            className="chapterNavSelect"
+            aria-label="Chapter"
+          >
+            {activeChapters.map((chapter, index) => (
+              <option key={`${activePart?.title}-${chapter.title}`} value={index}>
+                {chapter.title}
+              </option>
+            ))}
+          </select>
+          <svg
+            className="chapterNavSelectChevron"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <polyline points="6 9 12 15 18 9" />
+          </svg>
+        </span>
+      </label>
     </div>
   );
 }

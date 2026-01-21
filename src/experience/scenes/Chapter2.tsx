@@ -1,51 +1,42 @@
-import { useMemo, useRef } from "react";
-import { CanvasTexture, Points } from "three";
+import { useEffect, useRef } from "react";
+import { GradientTexture, Stars } from "@react-three/drei";
+import { BackSide, Points, BufferAttribute } from "three";
 import { useFrame } from "@react-three/fiber";
 
 export default function Chapter2() {
   const pointsRef = useRef<Points>(null);
-  const count = 1000;
-  const positions = useMemo(() => {
-    const array = new Float32Array(count * 3);
+  const velocityRef = useRef<Float32Array | null>(null);
+
+  useEffect(() => {
+    if (!pointsRef.current) return;
+
+    // Create sparkles
+    const count = 1000;
+    const positions = new Float32Array(count * 3);
+    const velocities = new Float32Array(count * 3);
+
     for (let i = 0; i < count * 3; i += 3) {
-      array[i] = (Math.random() - 0.5) * 20;
-      array[i + 1] = (Math.random() - 0.5) * 20;
-      array[i + 2] = (Math.random() - 0.5) * 20;
+      positions[i] = (Math.random() - 0.5) * 20; // x
+      positions[i + 1] = (Math.random() - 0.5) * 20; // y
+      positions[i + 2] = (Math.random() - 0.5) * 20; // z
+
+      velocities[i] = (Math.random() - 0.5) * 0.02; // x velocity
+      velocities[i + 1] = (Math.random() - 0.5) * 0.02; // y velocity
+      velocities[i + 2] = (Math.random() - 0.5) * 0.02; // z velocity
     }
-    return array;
-  }, []);
-  const velocities = useMemo(() => {
-    const array = new Float32Array(count * 3);
-    for (let i = 0; i < count * 3; i += 3) {
-      array[i] = (Math.random() - 0.5) * 0.02;
-      array[i + 1] = (Math.random() - 0.5) * 0.02;
-      array[i + 2] = (Math.random() - 0.5) * 0.02;
-    }
-    return array;
-  }, []);
-  const sprite = useMemo(() => {
-    const size = 64;
-    const canvas = document.createElement("canvas");
-    canvas.width = size;
-    canvas.height = size;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return null;
-    const radius = size / 2;
-    ctx.clearRect(0, 0, size, size);
-    ctx.beginPath();
-    ctx.arc(radius, radius, radius, 0, Math.PI * 2);
-    ctx.fillStyle = "white";
-    ctx.fill();
-    const texture = new CanvasTexture(canvas);
-    texture.needsUpdate = true;
-    return texture;
+
+    velocityRef.current = velocities;
+    pointsRef.current.geometry.setAttribute(
+      "position",
+      new BufferAttribute(positions, 3)
+    );
   }, []);
 
   useFrame(() => {
-    if (!pointsRef.current) return;
+    if (!pointsRef.current || !velocityRef.current) return;
 
-    const attribute = pointsRef.current.geometry.attributes.position;
-    if (!attribute) return;
+    const positions = pointsRef.current.geometry.attributes.position.array as Float32Array;
+    const velocities = velocityRef.current;
 
     for (let i = 0; i < positions.length; i += 3) {
       // Update position
@@ -62,18 +53,43 @@ export default function Chapter2() {
       if (positions[i + 2] < -10) positions[i + 2] = 10;
     }
 
-    attribute.needsUpdate = true;
+    pointsRef.current.geometry.attributes.position.needsUpdate = true;
   });
 
   return (
     <>
+      {/* Dark galaxy background */}
+      <color attach="background" args={["#030306"]} />
+      <mesh position={[0, 0, -10]}>
+        <sphereGeometry args={[120, 64, 64]} />
+        <meshBasicMaterial side={BackSide}>
+          <GradientTexture
+            stops={[0, 0.45, 0.8, 1]}
+            colors={["#020205", "#080414", "#1b0b3d", "#0a0716"]}
+          />
+        </meshBasicMaterial>
+      </mesh>
+      <Stars radius={120} depth={80} count={3000} factor={4} saturation={0} fade speed={0.5} />
+
+      {/* Ambient light for overall illumination */}
+      <ambientLight intensity={0.4} color="#ffffff" />
+
+      {/* Blue point light from the side */}
+      <pointLight position={[20, 10, 15]} intensity={0.8} color="#6b9fd4" />
+
+      {/* Purple point light from the other side */}
+      <pointLight position={[-20, 5, 10]} intensity={0.6} color="#a855f7" />
+
+      {/* Directional light for depth */}
+      <directionalLight position={[0, 20, 10]} intensity={0.5} color="#4a90e2" />
+      
       {/* Sparkles */}
       <points ref={pointsRef}>
         <bufferGeometry>
           <bufferAttribute
             attach="attributes-position"
-            count={count}
-            array={positions}
+            count={1000}
+            array={new Float32Array(3000)}
             itemSize={3}
           />
         </bufferGeometry>
@@ -81,10 +97,6 @@ export default function Chapter2() {
           size={0.05}
           color="#ffffff"
           sizeAttenuation={true}
-          transparent={true}
-          alphaTest={0.5}
-          map={sprite || undefined}
-          alphaMap={sprite || undefined}
         />
       </points>
     </>

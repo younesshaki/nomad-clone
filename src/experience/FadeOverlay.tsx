@@ -3,6 +3,10 @@ interface FadeOverlayProps {
 }
 
 export default function FadeOverlay({ opacity }: FadeOverlayProps) {
+  if (!Number.isFinite(opacity) || opacity <= 0.001) {
+    return null;
+  }
+
   console.log("FadeOverlay rendering with opacity:", opacity);
   return (
     <div

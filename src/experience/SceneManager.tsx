@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import gsap from "gsap";
 import Chapter1 from "./scenes/Chapter1";
 import Chapter2 from "./scenes/Chapter2";
@@ -9,45 +9,57 @@ interface SceneManagerProps {
   onFadeChange?: (fade: number) => void;
   onChapterChange?: (chapter: number) => void;
   currentChapter: number;
+  onRegisterGoTo?: (fn: (partIndex: number, chapterIndex: number) => void) => void;
 }
 
 export default function SceneManager({ onFadeChange, onChapterChange, currentChapter }: SceneManagerProps) {
   const [chapter, setChapter] = useState(1);
+  const [fade, setFade] = useState(0);
+  const fadeRef = useRef(0);
+  const fadeTimelineRef = useRef<gsap.core.Timeline | null>(null);
 
   console.log("SceneManager rendered, chapter:", chapter);
 
   // Update chapter when prop changes
   useEffect(() => {
-    setChapter(currentChapter);
+    if (currentChapter === chapter) return;
+    fadeTimelineRef.current?.kill();
+
+    const tl = gsap.timeline();
+    fadeTimelineRef.current = tl;
+    tl.to({ v: fadeRef.current }, {
+      v: 1,
+      duration: 0.6,
+      onUpdate() {
+        const newFade = (this.targets()[0] as { v: number }).v;
+        fadeRef.current = newFade;
+        setFade(newFade);
+        onFadeChange?.(newFade);
+      },
+    })
+      .add(() => {
+        setChapter(currentChapter);
+        onChapterChange?.(currentChapter);
+      })
+      .to({ v: 1 }, {
+        v: 0,
+        duration: 0.6,
+        onUpdate() {
+          const newFade = (this.targets()[0] as { v: number }).v;
+          fadeRef.current = newFade;
+          setFade(newFade);
+          onFadeChange?.(newFade);
+        },
+      });
+
+    return () => {
+      tl.kill();
+    };
   }, [currentChapter]);
 
-  // helper fade functions
-  const fadeIn = () => gsap.to({ v: fade }, {
-    v: 0,
-    duration: 1,
-    onUpdate() { 
-      const newFade = (this.targets()[0] as any).v;
-      setFade(newFade);
-      onFadeChange?.(newFade);
-    }
-  });
-
-  const fadeOut = () => gsap.to({ v: fade }, {
-    v: 1,
-    duration: 1,
-    onUpdate() { 
-      const newFade = (this.targets()[0] as any).v;
-      setFade(newFade);
-      onFadeChange?.(newFade);
-    }
-  });
-
-  // Don't auto-play timeline - let user control with buttons
-  // useEffect(() => {
-  //   // MASTER FILM TIMELINE
-  //   const tl = gsap.timeline();
-  //   // ... timeline code removed for manual control
-  // }, []);
+  useEffect(() => {
+    fadeRef.current = fade;
+  }, [fade]);
 
   return (
     <>
