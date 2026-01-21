@@ -1,5 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
-import gsap from "gsap";
+import { useEffect, useState } from "react";
 import Chapter1 from "./scenes/Chapter1";
 import Chapter2 from "./scenes/Chapter2";
 import Chapter3 from "./scenes/Chapter3";
@@ -20,34 +19,6 @@ export default function SceneManager({ onFadeChange, onChapterChange, currentCha
   useEffect(() => {
     setChapter(currentChapter);
   }, [currentChapter]);
-
-  // helper fade functions
-  const fadeIn = () => gsap.to({ v: fade }, {
-    v: 0,
-    duration: 1,
-    onUpdate() { 
-      const newFade = (this.targets()[0] as any).v;
-      setFade(newFade);
-      onFadeChange?.(newFade);
-    }
-  });
-
-  const fadeOut = () => gsap.to({ v: fade }, {
-    v: 1,
-    duration: 1,
-    onUpdate() { 
-      const newFade = (this.targets()[0] as any).v;
-      setFade(newFade);
-      onFadeChange?.(newFade);
-    }
-  });
-
-  // Don't auto-play timeline - let user control with buttons
-  // useEffect(() => {
-  //   // MASTER FILM TIMELINE
-  //   const tl = gsap.timeline();
-  //   // ... timeline code removed for manual control
-  // }, []);
 
   return (
     <>
