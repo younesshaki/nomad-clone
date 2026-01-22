@@ -1,12 +1,12 @@
 import { Canvas } from "@react-three/fiber";
-import { Html, OrbitControls } from "@react-three/drei";
+import { OrbitControls, useProgress } from "@react-three/drei";
 import { Perf } from "r3f-perf";
 import CameraRig from "./CameraRig";
 import SceneManager from "./SceneManager";
 import FadeOverlay from "./FadeOverlay";
 import ChapterNav from "./ui/ChapterNav";
 import { LoadingIndicator } from "./ui/LoadingIndicator";
-import { Suspense, useCallback, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { parts } from "./parts";
 import gsap from "gsap";
 
@@ -18,6 +18,9 @@ export default function Experience() {
   const [visiblePartIndex, setVisiblePartIndex] = useState(0);
   const [sceneIndex, setSceneIndex] = useState(1);
   const [goTo, setGoTo] = useState<((partIndex: number, chapterIndex: number) => void) | null>(null);
+  const { active: isLoading } = useProgress();
+  const [showLoader, setShowLoader] = useState(false);
+  const loaderStartRef = useRef<number | null>(null);
   
   console.log("Experience component rendered", {
     fade,
@@ -29,6 +32,24 @@ export default function Experience() {
   useEffect(() => {
     setSceneIndex(visibleChapterIndex + 1);
   }, [visibleChapterIndex]);
+
+  useEffect(() => {
+    if (isLoading) {
+      if (!showLoader) {
+        loaderStartRef.current = Date.now();
+        setShowLoader(true);
+      }
+      return;
+    }
+
+    if (showLoader) {
+      const start = loaderStartRef.current ?? 0;
+      const elapsed = Date.now() - start;
+      const remaining = Math.max(0, 300 - elapsed);
+      const timeoutId = window.setTimeout(() => setShowLoader(false), remaining);
+      return () => window.clearTimeout(timeoutId);
+    }
+  }, [isLoading, showLoader, loaderStartRef]);
 
   const handleSelectionChange = useCallback(
     (partIndex: number, chapterIndex: number) => {
@@ -73,17 +94,26 @@ export default function Experience() {
       >
         {import.meta.env.DEV && <Perf position="top-left" />}
         <color attach="background" args={["black"]} />
-        <CameraRig key={sceneIndex} sceneIndex={sceneIndex} />
-        <Suspense fallback={<Html center><LoadingIndicator /></Html>}>
+        <CameraRig
+          key={`${sceneIndex}-${visiblePartIndex}-${visibleChapterIndex}`}
+          sceneIndex={sceneIndex}
+          currentPart={visiblePartIndex + 1}
+          currentChapter={visibleChapterIndex + 1}
+        />
+        <Suspense fallback={null}>
           <SceneManager
             currentChapter={visibleChapterIndex + 1}
             currentPart={visiblePartIndex + 1}
           />
         </Suspense>
         <pointLight position={[0, 5, 0]} intensity={1} color="white" />
-        <OrbitControls key={`${visiblePartIndex}-${visibleChapterIndex}`} />
+        <OrbitControls
+          key={`${visiblePartIndex}-${visibleChapterIndex}`}
+          enableZoom={visiblePartIndex === 0 && visibleChapterIndex === 3 ? false : true}
+        />
       </Canvas>
       <FadeOverlay opacity={fade} />
+      {showLoader && <LoadingIndicator />}
       <ChapterNav
         parts={parts}
         activePartIndex={activePartIndex}

@@ -18,12 +18,7 @@ export default function Chapter4() {
         </meshBasicMaterial>
       </mesh>
       <Stars radius={120} depth={50} count={800} factor={3} saturation={0} fade speed={0.5} />
-      <ambientLight intensity={0.2} />
-      <directionalLight position={[4, 6, 3]} intensity={1.8} />
-      {/* Fewer lights to reduce GPU cost */}
-      <rectAreaLight position={[2.6, 1.4, 3.1]} intensity={22} width={6} height={0.6} color="#43b0ff" />
-      <rectAreaLight position={[-2.6, 1.1, 3.1]} intensity={20} width={5.5} height={0.6} color="#2678ff" />
-      <spotLight position={[0, 2.4, -2.6]} intensity={14} angle={0.6} penumbra={0.7} color="#ff2a52" />
+      <ambientLight intensity={0.9} />
       <Center>
         <primitive object={scene} scale={1} />
       </Center>
