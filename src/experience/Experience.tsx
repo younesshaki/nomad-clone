@@ -6,11 +6,14 @@ import FadeOverlay from "./FadeOverlay";
 import ChapterNav from "./ui/ChapterNav";
 import { Suspense, useCallback, useEffect, useState } from "react";
 import { parts } from "./parts";
+import gsap from "gsap";
 
 export default function Experience() {
   const [fade, setFade] = useState(0);
   const [activePartIndex, setActivePartIndex] = useState(0);
   const [activeChapterIndex, setActiveChapterIndex] = useState(0);
+  const [visibleChapterIndex, setVisibleChapterIndex] = useState(0);
+  const [visiblePartIndex, setVisiblePartIndex] = useState(0);
   const [sceneIndex, setSceneIndex] = useState(1);
   const [goTo, setGoTo] = useState<((partIndex: number, chapterIndex: number) => void) | null>(null);
   
@@ -18,16 +21,44 @@ export default function Experience() {
     fade,
     part: activePartIndex,
     chapter: activeChapterIndex,
+    visibleChapter: visibleChapterIndex
   });
 
   useEffect(() => {
-    setSceneIndex(activeChapterIndex + 1);
-  }, [activeChapterIndex]);
+    setSceneIndex(visibleChapterIndex + 1);
+  }, [visibleChapterIndex]);
 
   const handleSelectionChange = useCallback(
     (partIndex: number, chapterIndex: number) => {
+      // Update UI state immediately for responsiveness
       setActivePartIndex(partIndex);
       setActiveChapterIndex(chapterIndex);
+
+      // Trigger transition for 3D content
+      gsap.to({ v: 0 }, {
+        v: 1,
+        duration: 0.5,
+        ease: "power2.inOut",
+        onUpdate() {
+          setFade((this.targets()[0] as any).v);
+        },
+        onComplete() {
+          // Update visible state while screen is black
+          setVisiblePartIndex(partIndex);
+          setVisibleChapterIndex(chapterIndex);
+
+          // Small delay before fading back in
+          gsap.to({ v: 1 }, {
+            v: 0,
+            duration: 0.5,
+            delay: 0.1,
+            ease: "power2.inOut",
+            onUpdate() {
+              setFade((this.targets()[0] as any).v);
+            }
+          });
+        }
+      });
     },
     [],
   );
@@ -42,12 +73,12 @@ export default function Experience() {
         <CameraRig key={sceneIndex} sceneIndex={sceneIndex} />
         <Suspense fallback={null}>
           <SceneManager
-            onFadeChange={setFade}
-            currentChapter={activeChapterIndex + 1}
+            currentChapter={visibleChapterIndex + 1}
+            currentPart={visiblePartIndex + 1}
           />
         </Suspense>
         <pointLight position={[0, 5, 0]} intensity={1} color="white" />
-        <OrbitControls key={`${activePartIndex}-${activeChapterIndex}`} />
+        <OrbitControls key={`${visiblePartIndex}-${visibleChapterIndex}`} />
       </Canvas>
       <FadeOverlay opacity={fade} />
       <ChapterNav

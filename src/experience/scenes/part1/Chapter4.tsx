@@ -1,14 +1,9 @@
 import { Center, GradientTexture, Stars, useGLTF } from "@react-three/drei";
 import { BackSide } from "three";
-import friesUrl from "../../assets/Fries.glb?url";
+import carUrl from "../../../assets/ac_-_bmw_1m_free.glb?url";
 
-declare module "*.glb" {
-  const src: string;
-  export default src;
-}
-
-export default function Chapter3() {
-  const { scene } = useGLTF(friesUrl);
+export default function Chapter4() {
+  const { scene } = useGLTF(carUrl);
 
   return (
     <>
@@ -24,7 +19,7 @@ export default function Chapter3() {
       </mesh>
       <Stars radius={120} depth={80} count={3000} factor={4} saturation={0} fade speed={0.5} />
       <ambientLight intensity={0.6} />
-      <directionalLight position={[3, 5, 2]} intensity={1} />
+      <directionalLight position={[5, 6, 4]} intensity={3.2} />
       <Center>
         <primitive object={scene} scale={1} />
       </Center>

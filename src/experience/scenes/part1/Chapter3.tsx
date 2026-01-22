@@ -1,11 +1,6 @@
 import { Center, GradientTexture, Stars, useGLTF } from "@react-three/drei";
 import { BackSide } from "three";
-import friesUrl from "../../assets/Fries.glb?url";
-
-declare module "*.glb" {
-  const src: string;
-  export default src;
-}
+import friesUrl from "../../../assets/Fries.glb?url";
 
 export default function Chapter3() {
   const { scene } = useGLTF(friesUrl);
