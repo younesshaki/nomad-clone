@@ -1,9 +1,10 @@
 import { Canvas } from "@react-three/fiber";
-import { OrbitControls } from "@react-three/drei";
+import { Html, OrbitControls } from "@react-three/drei";
 import CameraRig from "./CameraRig";
 import SceneManager from "./SceneManager";
 import FadeOverlay from "./FadeOverlay";
 import ChapterNav from "./ui/ChapterNav";
+import { LoadingIndicator } from "./ui/LoadingIndicator";
 import { Suspense, useCallback, useEffect, useState } from "react";
 import { parts } from "./parts";
 import gsap from "gsap";
@@ -71,7 +72,7 @@ export default function Experience() {
       >
         <color attach="background" args={["black"]} />
         <CameraRig key={sceneIndex} sceneIndex={sceneIndex} />
-        <Suspense fallback={null}>
+        <Suspense fallback={<Html center><LoadingIndicator /></Html>}>
           <SceneManager
             currentChapter={visibleChapterIndex + 1}
             currentPart={visiblePartIndex + 1}
