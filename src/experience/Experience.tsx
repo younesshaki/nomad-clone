@@ -1,5 +1,6 @@
 import { Canvas } from "@react-three/fiber";
 import { Html, OrbitControls } from "@react-three/drei";
+import { Perf } from "r3f-perf";
 import CameraRig from "./CameraRig";
 import SceneManager from "./SceneManager";
 import FadeOverlay from "./FadeOverlay";
@@ -70,6 +71,7 @@ export default function Experience() {
         style={{ width: "100%", height: "100%" }}
         camera={{ position: [0, 0, 5], fov: 75, far: 10000 }}
       >
+        {import.meta.env.DEV && <Perf position="top-left" />}
         <color attach="background" args={["black"]} />
         <CameraRig key={sceneIndex} sceneIndex={sceneIndex} />
         <Suspense fallback={<Html center><LoadingIndicator /></Html>}>

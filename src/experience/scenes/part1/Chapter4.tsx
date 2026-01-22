@@ -1,6 +1,6 @@
 import { Center, GradientTexture, Stars, useGLTF } from "@react-three/drei";
 import { BackSide } from "three";
-import carUrl from "../../../assets/ac_-_bmw_1m_free.glb?url";
+import carUrl from "../../../assets/bmw_optimized.glb?url";
 
 export default function Chapter4() {
   const { scene } = useGLTF(carUrl);
@@ -9,7 +9,7 @@ export default function Chapter4() {
     <>
       <color attach="background" args={["#030306"]} />
       <mesh position={[0, 0, -10]}>
-        <sphereGeometry args={[120, 64, 64]} />
+        <sphereGeometry args={[120, 24, 24]} />
         <meshBasicMaterial side={BackSide}>
           <GradientTexture
             stops={[0, 0.45, 0.8, 1]}
@@ -17,14 +17,13 @@ export default function Chapter4() {
           />
         </meshBasicMaterial>
       </mesh>
-      <Stars radius={120} depth={80} count={3000} factor={4} saturation={0} fade speed={0.5} />
+      <Stars radius={120} depth={50} count={800} factor={3} saturation={0} fade speed={0.5} />
       <ambientLight intensity={0.2} />
       <directionalLight position={[4, 6, 3]} intensity={1.8} />
-      {/* Wide strip lights for long reflections */}
-      <rectAreaLight position={[2.8, 1.5, 3.2]} intensity={22} width={6} height={0.6} color="#43b0ff" />
-      <rectAreaLight position={[-2.8, 1.2, 3.2]} intensity={20} width={5.5} height={0.6} color="#2678ff" />
-      <rectAreaLight position={[0, 2.6, -2.8]} intensity={18} width={5} height={0.5} color="#ff2a52" />
-      <rectAreaLight position={[0, 0.8, 3.8]} intensity={16} width={4.5} height={0.45} color="#ff335f" />
+      {/* Fewer lights to reduce GPU cost */}
+      <rectAreaLight position={[2.6, 1.4, 3.1]} intensity={22} width={6} height={0.6} color="#43b0ff" />
+      <rectAreaLight position={[-2.6, 1.1, 3.1]} intensity={20} width={5.5} height={0.6} color="#2678ff" />
+      <spotLight position={[0, 2.4, -2.6]} intensity={14} angle={0.6} penumbra={0.7} color="#ff2a52" />
       <Center>
         <primitive object={scene} scale={1} />
       </Center>

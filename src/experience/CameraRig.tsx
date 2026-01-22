@@ -1,10 +1,10 @@
 import { useThree } from "@react-three/fiber";
-import { useEffect, useRef } from "react";
-import { Group, Vector3Tuple } from "three";
+import { useEffect } from "react";
+import gsap from "gsap";
 
 type ChapterPose = {
-  rig: Vector3Tuple;
-  target: Vector3Tuple;
+  rig: [number, number, number];
+  target: [number, number, number];
 };
 
 const chapterPoses: Record<number, ChapterPose> = {
@@ -16,22 +16,21 @@ const chapterPoses: Record<number, ChapterPose> = {
 
 export default function CameraRig({ sceneIndex }: { sceneIndex: number }) {
   const { camera } = useThree();
-  const rig = useRef<Group>(null);
-  const target = useRef<Group>(null);
 
   useEffect(() => {
     const pose = chapterPoses[sceneIndex] ?? chapterPoses[1];
-    if (rig.current) rig.current.position.set(...pose.rig);
-    if (target.current) target.current.position.set(...pose.target);
-    camera.position.set(...pose.rig);
-    camera.lookAt(...pose.target);
+    gsap.to(camera.position, {
+      x: pose.rig[0],
+      y: pose.rig[1],
+      z: pose.rig[2],
+      duration: 2.5,
+      ease: "power3.inOut",
+      onUpdate: () => {
+        camera.lookAt(...pose.target);
+      },
+    });
     camera.updateProjectionMatrix();
   }, [camera, sceneIndex]);
 
-  return (
-    <>
-      <group ref={rig} position={[0, 0, 5]} />
-      <group ref={target} position={[0, 0, 0]} />
-    </>
-  );
+  return null;
 }
