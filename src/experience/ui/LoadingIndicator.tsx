@@ -16,9 +16,6 @@ const LoadingIndicatorBase = memo(({ className, variant, text }: LoadingIndicato
         <div className="wind-line wind-3" />
         <div className="wind-line wind-4" />
 
-        <div className="flame flame-1" />
-        <div className="flame flame-2" />
-
         <div className="cloud cloud-1" />
         <div className="cloud cloud-2" />
 
@@ -84,27 +81,27 @@ LoadingIndicatorBase.displayName = "LoadingIndicatorBase";
 export const LoadingIndicatorA = memo(
   ({ className, text }: { className?: string; text: string }) => (
     <LoadingIndicatorBase className={className} variant="a" text={text} />
-  ),
+  )
 );
 export const LoadingIndicatorB = memo(
   ({ className, text }: { className?: string; text: string }) => (
     <LoadingIndicatorBase className={className} variant="b" text={text} />
-  ),
+  )
 );
 export const LoadingIndicatorC = memo(
   ({ className, text }: { className?: string; text: string }) => (
     <LoadingIndicatorBase className={className} variant="c" text={text} />
-  ),
+  )
 );
 export const LoadingIndicatorD = memo(
   ({ className, text }: { className?: string; text: string }) => (
     <LoadingIndicatorBase className={className} variant="d" text={text} />
-  ),
+  )
 );
 export const LoadingIndicatorE = memo(
   ({ className, text }: { className?: string; text: string }) => (
     <LoadingIndicatorBase className={className} variant="e" text={text} />
-  ),
+  )
 );
 
 LoadingIndicatorA.displayName = "LoadingIndicatorA";
