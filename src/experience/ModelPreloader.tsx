@@ -1,7 +1,10 @@
+import { useEffect } from "react";
 import { ALL_SCENE_ASSETS, preloadAssetUrls } from "./sceneAssets";
 
-preloadAssetUrls(ALL_SCENE_ASSETS);
-
 export function ModelPreloader() {
+  useEffect(() => {
+    preloadAssetUrls(ALL_SCENE_ASSETS);
+  }, []);
+
   return null;
 }

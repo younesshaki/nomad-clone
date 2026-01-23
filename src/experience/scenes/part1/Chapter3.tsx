@@ -1,11 +1,14 @@
-import { Center, GradientTexture, Stars, useGLTF } from "@react-three/drei";
+import { Center, GradientTexture, Stars } from "@react-three/drei";
 import { BackSide } from "three";
 import friesUrl from "../../../assets/Fries.glb?url";
 import redbullUrl from "../../../assets/redbull.glb?url";
+import { useDisposableGLTF } from "../../../hooks/useDisposableGLTF";
 
 export default function Chapter3() {
-  const { scene: friesScene } = useGLTF(friesUrl);
-  const { scene: redbullScene } = useGLTF(redbullUrl);
+  const { scene: friesScene } = useDisposableGLTF(friesUrl);
+  const { scene: redbullScene } = useDisposableGLTF(redbullUrl);
+  const isMobile =
+    typeof navigator !== "undefined" && /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 
   return (
     <>
@@ -19,7 +22,15 @@ export default function Chapter3() {
           />
         </meshBasicMaterial>
       </mesh>
-      <Stars radius={120} depth={80} count={3000} factor={4} saturation={0} fade speed={0.5} />
+      <Stars
+        radius={120}
+        depth={80}
+        count={isMobile ? 800 : 3000}
+        factor={4}
+        saturation={0}
+        fade
+        speed={0.5}
+      />
       <ambientLight intensity={0.6} />
       <directionalLight position={[3, 5, 2]} intensity={1} />
       <Center>

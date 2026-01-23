@@ -11,14 +11,44 @@
   opacity: 0;
 }
 
-.loaderBackdropA {
+.loaderBackdrop {
   position: fixed;
   inset: 0;
   z-index: 550;
   pointer-events: none;
-  background: linear-gradient(135deg, #e6f4ff 0%, #ffffff 100%);
+  background: linear-gradient(135deg, var(--loader-backdrop-start) 0%, var(--loader-backdrop-end) 100%);
   filter: blur(16px);
   transform: scale(1.05);
+}
+
+.loaderBackdrop-a {
+  --loader-backdrop-start: #2e8dd6;
+  --loader-backdrop-end: #ffffff;
+}
+
+.loaderBackdrop-b {
+  --loader-backdrop-start: #1f1f24;
+  --loader-backdrop-end: #0a0a0f;
+}
+
+.loaderBackdrop-c {
+  --loader-backdrop-start: #705e2c;
+  --loader-backdrop-end: #0d0b08;
+}
+
+.loaderBackdrop-d {
+  --loader-backdrop-start: #720808;
+  --loader-backdrop-end: #1a0500;
+}
+
+.loaderBackdrop-e {
+  --loader-backdrop-start: #337dcd;
+  --loader-backdrop-end: #0b1320;
+}
+
+.loaderBackdrop-preload {
+  --loader-backdrop-start: #ffffff;
+  --loader-backdrop-end: #f5f5f5;
 }
 
 .loader-container {

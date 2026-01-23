@@ -44,6 +44,9 @@ importers:
       three:
         specifier: ^0.164.1
         version: 0.164.1
+      three-stdlib:
+        specifier: ^2.36.1
+        version: 2.36.1(three@0.164.1)
     devDependencies:
       '@gltf-transform/cli':
         specifier: ^4.3.0

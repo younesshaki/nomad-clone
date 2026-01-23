@@ -6,6 +6,8 @@ import { useFrame } from "@react-three/fiber";
 export default function Chapter2() {
   const pointsRef = useRef<Points>(null);
   const velocityRef = useRef<Float32Array | null>(null);
+  const isMobile =
+    typeof navigator !== "undefined" && /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
 
   useEffect(() => {
     if (!pointsRef.current) return;
@@ -69,7 +71,15 @@ export default function Chapter2() {
           />
         </meshBasicMaterial>
       </mesh>
-      <Stars radius={120} depth={80} count={3000} factor={4} saturation={0} fade speed={0.5} />
+      <Stars
+        radius={120}
+        depth={80}
+        count={isMobile ? 800 : 3000}
+        factor={4}
+        saturation={0}
+        fade
+        speed={0.5}
+      />
 
       {/* Ambient light for overall illumination */}
       <ambientLight intensity={0.4} color="#ffffff" />

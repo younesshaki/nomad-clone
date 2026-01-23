@@ -1,5 +1,6 @@
 import { Canvas } from "@react-three/fiber";
 import { OrbitControls, useProgress } from "@react-three/drei";
+import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
 import { Perf } from "r3f-perf";
 import CameraRig from "./CameraRig";
 import SceneManager from "./SceneManager";
@@ -83,6 +84,7 @@ export default function Experience() {
   const [modelsPreloaded, setModelsPreloaded] = useState(false);
   const [minTimeElapsed, setMinTimeElapsed] = useState(false);
   const [warmLoader, setWarmLoader] = useState(true);
+  const controlsRef = useRef<OrbitControlsImpl | null>(null);
   const loaderTextByPart = [
     "Loading Genesis",
     "Loading Trials",
@@ -94,6 +96,16 @@ export default function Experience() {
   const loaderText = loadingActive
     ? progressLabel
     : loaderTextByPart[visiblePartIndex] ?? "Loading...";
+  const loaderBackdropClass =
+    visiblePartIndex === 0
+      ? "loaderBackdrop-a"
+      : visiblePartIndex === 1
+        ? "loaderBackdrop-b"
+        : visiblePartIndex === 2
+          ? "loaderBackdrop-c"
+          : visiblePartIndex === 3
+            ? "loaderBackdrop-d"
+            : "loaderBackdrop-e";
   const LoaderComponent =
     visiblePartIndex === 0
       ? LoadingIndicatorA
@@ -132,6 +144,16 @@ export default function Experience() {
     const timeoutId = window.setTimeout(() => setWarmLoader(false), 0);
     return () => window.clearTimeout(timeoutId);
   }, []);
+
+  useEffect(() => {
+    if (!controlsRef.current) {
+      return;
+    }
+
+    controlsRef.current.enabled = true;
+    controlsRef.current.enableZoom = !(visiblePartIndex === 0 && visibleChapterIndex === 3);
+    controlsRef.current.update();
+  }, [visibleChapterIndex, visiblePartIndex]);
 
   useEffect(() => {
     const scenes = getAdjacentScenes(visiblePartIndex, visibleChapterIndex, parts);
@@ -191,6 +213,7 @@ export default function Experience() {
           background: "black",
         }}
       >
+        <div className="loaderBackdrop loaderBackdrop-preload" />
         <LoadingIndicatorPreload text={progressLabel} />
         <ModelPreloader />
       </div>
@@ -221,14 +244,14 @@ export default function Experience() {
           </Suspense>
           <pointLight position={[0, 5, 0]} intensity={1} color="white" />
           <OrbitControls
-            enableZoom={visiblePartIndex === 0 && visibleChapterIndex === 3 ? false : true}
+            ref={controlsRef}
+            makeDefault
+            enableZoom={!(visiblePartIndex === 0 && visibleChapterIndex === 3)}
           />
         </Canvas>
       </CanvasErrorBoundary>
       <FadeOverlay opacity={fade} />
-      {showLoader && visiblePartIndex === 0 && (
-        <div className="loaderBackdropA" />
-      )}
+      {showLoader && <div className={`loaderBackdrop ${loaderBackdropClass}`} />}
       {warmLoader && <LoadingIndicatorA className="isHidden" text="Loading..." />}
       {showLoader && <LoaderComponent text={loaderText} />}
       <ChapterNav

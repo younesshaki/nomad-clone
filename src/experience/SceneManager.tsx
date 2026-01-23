@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import Part1Chapter1 from "./scenes/part1/Chapter1";
 import Part1Chapter2 from "./scenes/part1/Chapter2";
 import Part1Chapter3 from "./scenes/part1/Chapter3";
@@ -39,47 +39,77 @@ export default function SceneManager({ currentChapter, currentPart }: SceneManag
     setPart(currentPart);
   }, [currentChapter, currentPart]);
 
-  const renderScene = () => {
-    switch (part) {
-      case 1:
-        if (chapter === 1) return <Part1Chapter1 />;
-        if (chapter === 2) return <Part1Chapter2 />;
-        if (chapter === 3) return <Part1Chapter3 />;
-        if (chapter === 4) return <Part1Chapter4 />;
-        break;
-      case 2:
-        if (chapter === 1) return <Part2Chapter1 />;
-        if (chapter === 2) return <Part2Chapter2 />;
-        if (chapter === 3) return <Part2Chapter3 />;
-        if (chapter === 4) return <Part2Chapter4 />;
-        break;
-      case 3:
-        if (chapter === 1) return <Part3Chapter1 />;
-        if (chapter === 2) return <Part3Chapter2 />;
-        if (chapter === 3) return <Part3Chapter3 />;
-        if (chapter === 4) return <Part3Chapter4 />;
-        break;
-      case 4:
-        if (chapter === 1) return <Part4Chapter1 />;
-        if (chapter === 2) return <Part4Chapter2 />;
-        if (chapter === 3) return <Part4Chapter3 />;
-        if (chapter === 4) return <Part4Chapter4 />;
-        break;
-      case 5:
-        if (chapter === 1) return <Part5Chapter1 />;
-        if (chapter === 2) return <Part5Chapter2 />;
-        if (chapter === 3) return <Part5Chapter3 />;
-        if (chapter === 4) return <Part5Chapter4 />;
-        break;
-      default:
-        return null;
+  const scenesToRender = useMemo(() => {
+    const scenes: Array<{ key: string; component: ReactNode }> = [];
+
+    for (let offset = -1; offset <= 1; offset += 1) {
+      const chapterNum = chapter + offset;
+      if (chapterNum < 1 || chapterNum > 4) {
+        continue;
+      }
+
+      const Component = getChapterComponent(part, chapterNum);
+      if (!Component) {
+        continue;
+      }
+
+      const key = `part${part}-chapter${chapterNum}`;
+      scenes.push({
+        key,
+        component: <Component />,
+      });
     }
-    return null;
-  };
+
+    return scenes;
+  }, [chapter, part]);
+
+  const activeKey = `part${part}-chapter${chapter}`;
 
   return (
     <>
-      {renderScene()}
+      {scenesToRender.map(({ key, component }) => (
+        <group key={key} visible={key === activeKey}>
+          {component}
+        </group>
+      ))}
     </>
   );
+}
+
+function getChapterComponent(part: number, chapter: number) {
+  switch (part) {
+    case 1:
+      if (chapter === 1) return Part1Chapter1;
+      if (chapter === 2) return Part1Chapter2;
+      if (chapter === 3) return Part1Chapter3;
+      if (chapter === 4) return Part1Chapter4;
+      break;
+    case 2:
+      if (chapter === 1) return Part2Chapter1;
+      if (chapter === 2) return Part2Chapter2;
+      if (chapter === 3) return Part2Chapter3;
+      if (chapter === 4) return Part2Chapter4;
+      break;
+    case 3:
+      if (chapter === 1) return Part3Chapter1;
+      if (chapter === 2) return Part3Chapter2;
+      if (chapter === 3) return Part3Chapter3;
+      if (chapter === 4) return Part3Chapter4;
+      break;
+    case 4:
+      if (chapter === 1) return Part4Chapter1;
+      if (chapter === 2) return Part4Chapter2;
+      if (chapter === 3) return Part4Chapter3;
+      if (chapter === 4) return Part4Chapter4;
+      break;
+    case 5:
+      if (chapter === 1) return Part5Chapter1;
+      if (chapter === 2) return Part5Chapter2;
+      if (chapter === 3) return Part5Chapter3;
+      if (chapter === 4) return Part5Chapter4;
+      break;
+    default:
+      return null;
+  }
+  return null;
 }
