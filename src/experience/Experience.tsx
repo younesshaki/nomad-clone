@@ -5,7 +5,13 @@ import CameraRig from "./CameraRig";
 import SceneManager from "./SceneManager";
 import FadeOverlay from "./FadeOverlay";
 import ChapterNav from "./ui/ChapterNav";
-import { LoadingIndicatorA } from "./ui/LoadingIndicator";
+import {
+  LoadingIndicatorA,
+  LoadingIndicatorB,
+  LoadingIndicatorC,
+  LoadingIndicatorD,
+  LoadingIndicatorE,
+} from "./ui/LoadingIndicator";
 import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { parts } from "./parts";
 import gsap from "gsap";
@@ -22,6 +28,24 @@ export default function Experience() {
   const [showLoader, setShowLoader] = useState(false);
   const [modelsPreloaded, setModelsPreloaded] = useState(false);
   const [warmLoader, setWarmLoader] = useState(true);
+  const loaderTextByPart = [
+    "Loading Genesis",
+    "Loading Trials",
+    "Loading Exile",
+    "Loading Ascension",
+    "Loading Echoes",
+  ];
+  const loaderText = loaderTextByPart[visiblePartIndex] ?? "Loading...";
+  const LoaderComponent =
+    visiblePartIndex === 0
+      ? LoadingIndicatorA
+      : visiblePartIndex === 1
+        ? LoadingIndicatorB
+        : visiblePartIndex === 2
+          ? LoadingIndicatorC
+          : visiblePartIndex === 3
+            ? LoadingIndicatorD
+            : LoadingIndicatorE;
   
   console.log("Experience component rendered", {
     fade,
@@ -130,7 +154,8 @@ export default function Experience() {
         />
       </Canvas>
       <FadeOverlay opacity={fade} />
-      {showLoader && <LoadingIndicatorA text="Loading..." />}
+      {warmLoader && <LoadingIndicatorA className="isHidden" text="Loading..." />}
+      {showLoader && <LoaderComponent text={loaderText} />}
       <ChapterNav
         parts={parts}
         activePartIndex={activePartIndex}
