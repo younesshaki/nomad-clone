@@ -2,39 +2,109 @@
   position: fixed;
   top: 50%;
   left: 50%;
-  display: inline-flex;
-  align-items: center;
-  gap: 12px;
-  padding: 12px 18px;
   transform: translate(-50%, -50%);
-  color: #ffffff;
-  font-size: 1.1rem;
-  letter-spacing: 0.02em;
-  background: rgba(5, 5, 12, 0.6);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 999px;
   z-index: 600;
   pointer-events: none;
-  backdrop-filter: blur(6px);
 }
 
-.loadingIndicatorSpinner {
-  width: 18px;
-  height: 18px;
-  border: 2px solid rgba(255, 255, 255, 0.35);
-  border-top-color: #ffffff;
-  border-radius: 50%;
-  animation: loadingIndicatorSpin 0.9s linear infinite;
+.absolute {
+  position: absolute;
 }
 
-.loadingIndicatorText {
-  text-transform: uppercase;
-  font-size: 0.75rem;
-  letter-spacing: 0.18em;
+.inline-block {
+  display: inline-block;
+  overflow: visible;
 }
 
-@keyframes loadingIndicatorSpin {
-  to {
-    transform: rotate(360deg);
+.loader {
+  display: flex;
+  margin: 0.25em 0;
+}
+
+.w-2 {
+  width: 0.5em;
+}
+
+.dash {
+  animation: dashArray 2s ease-in-out infinite, dashOffset 2s linear infinite;
+}
+
+.spin {
+  animation: spinDashArray 2s ease-in-out infinite, spin 8s ease-in-out infinite,
+    dashOffset 2s linear infinite;
+  transform-origin: center;
+}
+
+.letter {
+  font-family: "Poppins", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 80px;
+  font-weight: 500;
+  fill: currentColor;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+  text-rendering: geometricPrecision;
+}
+
+@keyframes dashArray {
+  0% {
+    stroke-dasharray: 0 1 359 0;
+  }
+
+  50% {
+    stroke-dasharray: 0 359 1 0;
+  }
+
+  100% {
+    stroke-dasharray: 359 1 0 0;
+  }
+}
+
+@keyframes spinDashArray {
+  0% {
+    stroke-dasharray: 270 90;
+  }
+
+  50% {
+    stroke-dasharray: 0 360;
+  }
+
+  100% {
+    stroke-dasharray: 270 90;
+  }
+}
+
+@keyframes dashOffset {
+  0% {
+    stroke-dashoffset: 365;
+  }
+
+  100% {
+    stroke-dashoffset: 5;
+  }
+}
+
+@keyframes spin {
+  0% {
+    rotate: 0deg;
+  }
+
+  12.5%,
+  25% {
+    rotate: 270deg;
+  }
+
+  37.5%,
+  50% {
+    rotate: 540deg;
+  }
+
+  62.5%,
+  75% {
+    rotate: 810deg;
+  }
+
+  87.5%,
+  100% {
+    rotate: 1080deg;
   }
 }

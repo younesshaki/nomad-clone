@@ -1,5 +1,5 @@
 import { Canvas } from "@react-three/fiber";
-import { OrbitControls, useProgress } from "@react-three/drei";
+import { OrbitControls } from "@react-three/drei";
 import { Perf } from "r3f-perf";
 import CameraRig from "./CameraRig";
 import SceneManager from "./SceneManager";
@@ -18,9 +18,7 @@ export default function Experience() {
   const [visiblePartIndex, setVisiblePartIndex] = useState(0);
   const [sceneIndex, setSceneIndex] = useState(1);
   const [goTo, setGoTo] = useState<((partIndex: number, chapterIndex: number) => void) | null>(null);
-  const { active: isLoading } = useProgress();
   const [showLoader, setShowLoader] = useState(false);
-  const loaderStartRef = useRef<number | null>(null);
   
   console.log("Experience component rendered", {
     fade,
@@ -33,23 +31,6 @@ export default function Experience() {
     setSceneIndex(visibleChapterIndex + 1);
   }, [visibleChapterIndex]);
 
-  useEffect(() => {
-    if (isLoading) {
-      if (!showLoader) {
-        loaderStartRef.current = Date.now();
-        setShowLoader(true);
-      }
-      return;
-    }
-
-    if (showLoader) {
-      const start = loaderStartRef.current ?? 0;
-      const elapsed = Date.now() - start;
-      const remaining = Math.max(0, 300 - elapsed);
-      const timeoutId = window.setTimeout(() => setShowLoader(false), remaining);
-      return () => window.clearTimeout(timeoutId);
-    }
-  }, [isLoading, showLoader, loaderStartRef]);
 
   const handleSelectionChange = useCallback(
     (partIndex: number, chapterIndex: number) => {
@@ -57,30 +38,34 @@ export default function Experience() {
       setActivePartIndex(partIndex);
       setActiveChapterIndex(chapterIndex);
 
-      // Trigger transition for 3D content
-      gsap.to({ v: 0 }, {
+      const transition = gsap.timeline();
+      transition.to({ v: 0 }, {
         v: 1,
         duration: 0.5,
         ease: "power2.inOut",
         onUpdate() {
-          setFade((this.targets()[0] as any).v);
+          setFade((this.targets()[0] as { v: number }).v);
         },
         onComplete() {
-          // Update visible state while screen is black
           setVisiblePartIndex(partIndex);
           setVisibleChapterIndex(chapterIndex);
+          setShowLoader(true);
+        },
+      });
 
-          // Small delay before fading back in
-          gsap.to({ v: 1 }, {
-            v: 0,
-            duration: 0.5,
-            delay: 0.1,
-            ease: "power2.inOut",
-            onUpdate() {
-              setFade((this.targets()[0] as any).v);
-            }
-          });
-        }
+      transition.to({}, { duration: 2.5 });
+
+      transition.call(() => {
+        setShowLoader(false);
+      });
+
+      transition.to({ v: 1 }, {
+        v: 0,
+        duration: 0.5,
+        ease: "power2.inOut",
+        onUpdate() {
+          setFade((this.targets()[0] as { v: number }).v);
+        },
       });
     },
     [],
