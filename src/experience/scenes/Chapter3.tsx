@@ -4,7 +4,6 @@ import friesUrl from "../../assets/Fries.glb?url";
 
 declare module "*.glb" {
   const src: string;
-  export default src;
 }
 
 export default function Chapter3() {

@@ -5,10 +5,17 @@ import CameraRig from "./CameraRig";
 import SceneManager from "./SceneManager";
 import FadeOverlay from "./FadeOverlay";
 import ChapterNav from "./ui/ChapterNav";
-import { LoadingIndicator } from "./ui/LoadingIndicator";
+import {
+  LoadingIndicatorA,
+  LoadingIndicatorB,
+  LoadingIndicatorC,
+  LoadingIndicatorD,
+  LoadingIndicatorE,
+} from "./ui/LoadingIndicator";
 import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { parts } from "./parts";
 import gsap from "gsap";
+import { ModelPreloader } from "./ModelPreloader";
 
 export default function Experience() {
   const [fade, setFade] = useState(0);
@@ -19,6 +26,26 @@ export default function Experience() {
   const [sceneIndex, setSceneIndex] = useState(1);
   const [goTo, setGoTo] = useState<((partIndex: number, chapterIndex: number) => void) | null>(null);
   const [showLoader, setShowLoader] = useState(false);
+  const [modelsPreloaded, setModelsPreloaded] = useState(false);
+  const loaderTextByPart = [
+    "Loading Genesis",
+    "Loading Trials",
+    "Loading Exile",
+    "Loading Ascension",
+    "Loading Echoes",
+  ];
+  const loaderText = loaderTextByPart[visiblePartIndex] ?? "Loading...";
+  const LoaderComponent =
+    visiblePartIndex === 0
+      ? LoadingIndicatorA
+      : visiblePartIndex === 1
+        ? LoadingIndicatorB
+        : visiblePartIndex === 2
+          ? LoadingIndicatorC
+          : visiblePartIndex === 3
+            ? LoadingIndicatorD
+            : LoadingIndicatorE;
+  const [warmLoader, setWarmLoader] = useState(true);
   
   console.log("Experience component rendered", {
     fade,
@@ -30,6 +57,16 @@ export default function Experience() {
   useEffect(() => {
     setSceneIndex(visibleChapterIndex + 1);
   }, [visibleChapterIndex]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => setModelsPreloaded(true), 2000);
+    return () => window.clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => setWarmLoader(false), 0);
+    return () => window.clearTimeout(timeoutId);
+  }, []);
 
 
   const handleSelectionChange = useCallback(
@@ -71,8 +108,27 @@ export default function Experience() {
     [],
   );
   
+  if (!modelsPreloaded) {
+    return (
+      <div
+        style={{
+          width: "100vw",
+          height: "100vh",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          background: "black",
+        }}
+      >
+        <LoadingIndicatorA text="Loading Genesis" />
+        <ModelPreloader />
+      </div>
+    );
+  }
+
   return (
     <div style={{ position: "relative", width: "100%", height: "100%" }}>
+      <ModelPreloader />
       <Canvas
         style={{ width: "100%", height: "100%" }}
         camera={{ position: [0, 0, 5], fov: 75, far: 10000 }}
@@ -98,7 +154,8 @@ export default function Experience() {
         />
       </Canvas>
       <FadeOverlay opacity={fade} />
-      {showLoader && <LoadingIndicator />}
+      {warmLoader && <LoadingIndicatorA className="isHidden" text="Loading Genesis" />}
+      {showLoader && <LoaderComponent text={loaderText} />}
       <ChapterNav
         parts={parts}
         activePartIndex={activePartIndex}

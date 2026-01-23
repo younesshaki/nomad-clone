@@ -12,7 +12,7 @@ export default function Chapter1() {
         anchorX="center"
         anchorY="middle"
       >
-        Chapter One
+        A Star Was Born
       </Text>
     </>
   );

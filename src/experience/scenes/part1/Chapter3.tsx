@@ -1,9 +1,11 @@
 import { Center, GradientTexture, Stars, useGLTF } from "@react-three/drei";
 import { BackSide } from "three";
 import friesUrl from "../../../assets/Fries.glb?url";
+import redbullUrl from "../../../assets/redbull.glb?url";
 
 export default function Chapter3() {
-  const { scene } = useGLTF(friesUrl);
+  const { scene: friesScene } = useGLTF(friesUrl);
+  const { scene: redbullScene } = useGLTF(redbullUrl);
 
   return (
     <>
@@ -21,7 +23,10 @@ export default function Chapter3() {
       <ambientLight intensity={0.6} />
       <directionalLight position={[3, 5, 2]} intensity={1} />
       <Center>
-        <primitive object={scene} scale={1} />
+        <group>
+          <primitive object={friesScene} scale={1} position={[-0.8, 0, 0]} />
+          <primitive object={redbullScene} scale={1} position={[0.8, 0, 0]} />
+        </group>
       </Center>
     </>
   );

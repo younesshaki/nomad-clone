@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from "react";
 import type { Part } from "../parts";
 import "./ChapterNav.css";
 
@@ -48,6 +49,101 @@ function FancyButton({
   );
 }
 
+type SelectOption = {
+  label: string;
+  value: number;
+};
+
+function ChapterSelect({
+  label,
+  value,
+  options,
+  onChange,
+  disabled,
+}: {
+  label: string;
+  value: number;
+  options: SelectOption[];
+  onChange: (nextValue: number) => void;
+  disabled?: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+  const wrapRef = useRef<HTMLSpanElement | null>(null);
+  const selected = options.find((option) => option.value === value) ?? options[0];
+
+  useEffect(() => {
+    if (!open) return;
+    const handleOutside = (event: MouseEvent) => {
+      if (!wrapRef.current?.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleOutside);
+    return () => document.removeEventListener("mousedown", handleOutside);
+  }, [open]);
+
+  const handleToggle = () => {
+    if (disabled) return;
+    setOpen((prev) => !prev);
+  };
+
+  return (
+    <label className="chapterNavLabel">
+      <span className="chapterNavLabelText">{label}</span>
+      <span
+        ref={wrapRef}
+        className={`chapterNavSelectWrap${open ? " isOpen" : ""}${disabled ? " isDisabled" : ""}`}
+      >
+        <button
+          type="button"
+          className="chapterNavSelectButton"
+          onClick={handleToggle}
+          aria-haspopup="listbox"
+          aria-expanded={open}
+          disabled={disabled}
+        >
+          <span className="chapterNavSelectValue">{selected?.label ?? "Select"}</span>
+          <svg
+            className="chapterNavSelectChevron"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.5"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden="true"
+          >
+            <polyline points="6 9 12 15 18 9" />
+          </svg>
+        </button>
+
+        {open && (
+          <div className="chapterNavSelectMenu" role="listbox" aria-label={label}>
+            {options.map((option) => {
+              const isSelected = option.value === value;
+              return (
+                <button
+                  key={option.value}
+                  type="button"
+                  role="option"
+                  aria-selected={isSelected}
+                  className={`chapterNavSelectOption${isSelected ? " isSelected" : ""}`}
+                  onClick={() => {
+                    onChange(option.value);
+                    setOpen(false);
+                  }}
+                >
+                  {option.label}
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </span>
+    </label>
+  );
+}
+
 export default function ChapterNav({
   parts,
   activePartIndex,
@@ -76,38 +172,15 @@ export default function ChapterNav({
         />
       </div>
 
-      <label className="chapterNavLabel">
-        Part
-        <span className="chapterNavSelectWrap">
-          <select
-            value={activePartIndex}
-            onChange={(e) => {
-              const nextPart = Number(e.target.value);
-              onSelectionChange(nextPart, 0);
-            }}
-            className="chapterNavSelect"
-            aria-label="Part"
-          >
-            {parts.map((part, index) => (
-              <option key={part.title} value={index}>
-                {`Part ${index + 1}: ${part.title}`}
-              </option>
-            ))}
-          </select>
-          <svg
-            className="chapterNavSelectChevron"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            aria-hidden="true"
-          >
-            <polyline points="6 9 12 15 18 9" />
-          </svg>
-        </span>
-      </label>
+      <ChapterSelect
+        label="Part"
+        value={activePartIndex}
+        options={parts.map((part, index) => ({
+          value: index,
+          label: `Part ${index + 1}: ${part.title}`,
+        }))}
+        onChange={(nextPart) => onSelectionChange(nextPart, 0)}
+      />
 
       <div className="chapterNavButtonRow">
         <FancyButton
@@ -122,38 +195,16 @@ export default function ChapterNav({
         />
       </div>
 
-      <label className="chapterNavLabel">
-        Chapter
-        <span className="chapterNavSelectWrap">
-          <select
-            value={activeChapterIndex}
-            onChange={(e) => {
-              const nextChapter = Number(e.target.value);
-              onSelectionChange(activePartIndex, nextChapter);
-            }}
-            className="chapterNavSelect"
-            aria-label="Chapter"
-          >
-            {activeChapters.map((chapter, index) => (
-              <option key={`${activePart?.title}-${chapter.title}`} value={index}>
-                {chapter.title}
-              </option>
-            ))}
-          </select>
-          <svg
-            className="chapterNavSelectChevron"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            aria-hidden="true"
-          >
-            <polyline points="6 9 12 15 18 9" />
-          </svg>
-        </span>
-      </label>
+      <ChapterSelect
+        label="Chapter"
+        value={activeChapterIndex}
+        options={activeChapters.map((chapter, index) => ({
+          value: index,
+          label: chapter.title,
+        }))}
+        onChange={(nextChapter) => onSelectionChange(activePartIndex, nextChapter)}
+        disabled={activeChapters.length === 0}
+      />
     </div>
   );
 }
