@@ -110,6 +110,8 @@
   width: 60px;
   height: 80px;
   bottom: -120px;
+  display: block;
+  z-index: 4;
   background: linear-gradient(
     180deg,
     transparent 0%,
@@ -183,7 +185,7 @@
 }
 
 .loader-variant-d .cloud {
-  display: none;
+  display: none !important;
 }
 
 .loader-variant-d .bird-svg {
@@ -203,6 +205,10 @@
   --bal-cloud-color: rgba(242, 232, 213, 0.25);
   --bal-wind-color: rgba(242, 232, 213, 0.18);
   --bal-text-color: #f2e8d5;
+}
+
+.loader-container .flame {
+  display: none;
 }
 
 .loader-container .wind-line {
