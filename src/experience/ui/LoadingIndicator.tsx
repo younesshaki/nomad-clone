@@ -3,7 +3,7 @@ import "./LoadingIndicator.css";
 
 type LoadingIndicatorProps = {
   className?: string;
-  variant: "a" | "b" | "c" | "d" | "e";
+  variant: "a" | "b" | "c" | "d" | "e" | "preload";
   text: string;
 };
 
@@ -11,13 +11,95 @@ const LoadingIndicatorBase = memo(({ className, variant, text }: LoadingIndicato
   return (
     <div className="loadingIndicator" role="status" aria-live="polite">
       <div className={`loader-container loader-variant-${variant}${className ? ` ${className}` : ""}`}>
-        <div className="wind-line wind-1" />
-        <div className="wind-line wind-2" />
-        <div className="wind-line wind-3" />
-        <div className="wind-line wind-4" />
+        {variant !== "preload" && (
+          <>
+            <div className="wind-line wind-1" />
+            <div className="wind-line wind-2" />
+            <div className="wind-line wind-3" />
+            <div className="wind-line wind-4" />
+          </>
+        )}
 
-        <div className="cloud cloud-1" />
-        <div className="cloud cloud-2" />
+        {variant === "a" && (
+          <>
+            <div className="sun" />
+            <div className="sunbeam sunbeam-1" />
+            <div className="sunbeam sunbeam-2" />
+            <div className="sunbeam sunbeam-3" />
+            <div className="sunbeam sunbeam-4" />
+            <div className="flower flower-1">
+              <span className="petal" />
+              <span className="petal" />
+              <span className="petal" />
+              <span className="petal" />
+              <span className="petal" />
+              <span className="center" />
+            </div>
+            <div className="flower flower-2">
+              <span className="petal" />
+              <span className="petal" />
+              <span className="petal" />
+              <span className="petal" />
+              <span className="petal" />
+              <span className="center" />
+            </div>
+            <div className="flower flower-3">
+              <span className="petal" />
+              <span className="petal" />
+              <span className="petal" />
+              <span className="petal" />
+              <span className="petal" />
+              <span className="center" />
+            </div>
+          </>
+        )}
+
+        {variant === "preload" && (
+          <>
+            <div className="sunbeam sunbeam-1" />
+            <div className="sunbeam sunbeam-2" />
+            <div className="sunbeam sunbeam-3" />
+            <div className="sunbeam sunbeam-4" />
+            <div className="flower flower-1">
+              <span className="petal" />
+              <span className="petal" />
+              <span className="petal" />
+              <span className="petal" />
+              <span className="petal" />
+              <span className="center" />
+            </div>
+            <div className="flower flower-2">
+              <span className="petal" />
+              <span className="petal" />
+              <span className="petal" />
+              <span className="petal" />
+              <span className="petal" />
+              <span className="center" />
+            </div>
+            <div className="flower flower-3">
+              <span className="petal" />
+              <span className="petal" />
+              <span className="petal" />
+              <span className="petal" />
+              <span className="petal" />
+              <span className="center" />
+            </div>
+          </>
+        )}
+
+        {variant === "d" && (
+          <>
+            <div className="flame flame-1" />
+            <div className="flame flame-2" />
+          </>
+        )}
+
+        {variant !== "d" && variant !== "preload" && (
+          <>
+            <div className="cloud cloud-1" />
+            <div className="cloud cloud-2" />
+          </>
+        )}
 
         <div className="bird-wrapper">
           <svg className="bird-svg" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
@@ -103,9 +185,15 @@ export const LoadingIndicatorE = memo(
     <LoadingIndicatorBase className={className} variant="e" text={text} />
   )
 );
+export const LoadingIndicatorPreload = memo(
+  ({ className, text }: { className?: string; text: string }) => (
+    <LoadingIndicatorBase className={className} variant="preload" text={text} />
+  )
+);
 
 LoadingIndicatorA.displayName = "LoadingIndicatorA";
 LoadingIndicatorB.displayName = "LoadingIndicatorB";
 LoadingIndicatorC.displayName = "LoadingIndicatorC";
 LoadingIndicatorD.displayName = "LoadingIndicatorD";
 LoadingIndicatorE.displayName = "LoadingIndicatorE";
+LoadingIndicatorPreload.displayName = "LoadingIndicatorPreload";

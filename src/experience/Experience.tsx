@@ -1,23 +1,77 @@
 import { Canvas } from "@react-three/fiber";
-import { OrbitControls } from "@react-three/drei";
+import { OrbitControls, useProgress } from "@react-three/drei";
 import { Perf } from "r3f-perf";
 import CameraRig from "./CameraRig";
 import SceneManager from "./SceneManager";
 import FadeOverlay from "./FadeOverlay";
 import ChapterNav from "./ui/ChapterNav";
+import CanvasErrorBoundary from "./CanvasErrorBoundary";
 import {
   LoadingIndicatorA,
   LoadingIndicatorB,
   LoadingIndicatorC,
   LoadingIndicatorD,
   LoadingIndicatorE,
+  LoadingIndicatorPreload,
 } from "./ui/LoadingIndicator";
 import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { parts } from "./parts";
 import gsap from "gsap";
 import { ModelPreloader } from "./ModelPreloader";
+import { preloadSceneAssets } from "./sceneAssets";
+
+type SceneLocation = {
+  partIndex: number;
+  chapterIndex: number;
+};
+
+const getAdjacentScenes = (
+  partIndex: number,
+  chapterIndex: number,
+  partsData: typeof parts
+): SceneLocation[] => {
+  const scenes: SceneLocation[] = [{ partIndex, chapterIndex }];
+  const currentPart = partsData[partIndex];
+  const chapterCount = currentPart?.chapters.length ?? 0;
+
+  let prevPartIndex = partIndex;
+  let prevChapterIndex = chapterIndex - 1;
+  if (prevChapterIndex < 0) {
+    prevPartIndex = partIndex - 1;
+    if (prevPartIndex >= 0) {
+      const prevPart = partsData[prevPartIndex];
+      prevChapterIndex = Math.max(0, prevPart.chapters.length - 1);
+    }
+  }
+  if (prevPartIndex >= 0 && prevChapterIndex >= 0) {
+    scenes.push({ partIndex: prevPartIndex, chapterIndex: prevChapterIndex });
+  }
+
+  let nextPartIndex = partIndex;
+  let nextChapterIndex = chapterIndex + 1;
+  if (nextChapterIndex >= chapterCount) {
+    nextPartIndex = partIndex + 1;
+    if (nextPartIndex < partsData.length) {
+      nextChapterIndex = 0;
+    }
+  }
+  if (nextPartIndex < partsData.length && nextChapterIndex >= 0) {
+    scenes.push({ partIndex: nextPartIndex, chapterIndex: nextChapterIndex });
+  }
+
+  return scenes.filter(
+    (scene, index, list) =>
+      index ===
+      list.findIndex(
+        (value) =>
+          value.partIndex === scene.partIndex &&
+          value.chapterIndex === scene.chapterIndex
+      )
+  );
+};
 
 export default function Experience() {
+  const { active: loadingActive, progress } = useProgress();
   const [fade, setFade] = useState(0);
   const [activePartIndex, setActivePartIndex] = useState(0);
   const [activeChapterIndex, setActiveChapterIndex] = useState(0);
@@ -27,6 +81,7 @@ export default function Experience() {
   const [goTo, setGoTo] = useState<((partIndex: number, chapterIndex: number) => void) | null>(null);
   const [showLoader, setShowLoader] = useState(false);
   const [modelsPreloaded, setModelsPreloaded] = useState(false);
+  const [minTimeElapsed, setMinTimeElapsed] = useState(false);
   const [warmLoader, setWarmLoader] = useState(true);
   const loaderTextByPart = [
     "Loading Genesis",
@@ -35,7 +90,10 @@ export default function Experience() {
     "Loading Ascension",
     "Loading Echoes",
   ];
-  const loaderText = loaderTextByPart[visiblePartIndex] ?? "Loading...";
+  const progressLabel = loadingActive ? `Loading ${Math.round(progress)}%` : "Loading...";
+  const loaderText = loadingActive
+    ? progressLabel
+    : loaderTextByPart[visiblePartIndex] ?? "Loading...";
   const LoaderComponent =
     visiblePartIndex === 0
       ? LoadingIndicatorA
@@ -59,15 +117,28 @@ export default function Experience() {
   }, [visibleChapterIndex]);
 
   useEffect(() => {
-    const timer = window.setTimeout(() => setModelsPreloaded(true), 2000);
+    const timer = window.setTimeout(() => setMinTimeElapsed(true), 5000);
     return () => window.clearTimeout(timer);
   }, []);
+
+  useEffect(() => {
+    const loadingComplete = !loadingActive && (progress >= 100 || progress === 0);
+    if (minTimeElapsed && loadingComplete) {
+      setModelsPreloaded(true);
+    }
+  }, [loadingActive, minTimeElapsed, progress]);
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => setWarmLoader(false), 0);
     return () => window.clearTimeout(timeoutId);
   }, []);
 
+  useEffect(() => {
+    const scenes = getAdjacentScenes(visiblePartIndex, visibleChapterIndex, parts);
+    scenes.forEach(({ partIndex, chapterIndex }) => {
+      preloadSceneAssets(partIndex + 1, chapterIndex + 1);
+    });
+  }, [visibleChapterIndex, visiblePartIndex]);
 
   const handleSelectionChange = useCallback(
     (partIndex: number, chapterIndex: number) => {
@@ -120,7 +191,7 @@ export default function Experience() {
           background: "black",
         }}
       >
-        <LoadingIndicatorA text="Loading..." />
+        <LoadingIndicatorPreload text={progressLabel} />
         <ModelPreloader />
       </div>
     );
@@ -129,31 +200,35 @@ export default function Experience() {
   return (
     <div style={{ position: "relative", width: "100%", height: "100%" }}>
       <ModelPreloader />
-      <Canvas
-        style={{ width: "100%", height: "100%" }}
-        camera={{ position: [0, 0, 5], fov: 75, far: 10000 }}
-      >
-        {import.meta.env.DEV && <Perf position="top-left" />}
-        <color attach="background" args={["black"]} />
-        <CameraRig
-          key={`${sceneIndex}-${visiblePartIndex}-${visibleChapterIndex}`}
-          sceneIndex={sceneIndex}
-          currentPart={visiblePartIndex + 1}
-          currentChapter={visibleChapterIndex + 1}
-        />
-        <Suspense fallback={null}>
-          <SceneManager
-            currentChapter={visibleChapterIndex + 1}
+      <CanvasErrorBoundary>
+        <Canvas
+          style={{ width: "100%", height: "100%" }}
+          camera={{ position: [0, 0, 5], fov: 75, far: 10000 }}
+        >
+          {import.meta.env.DEV && <Perf position="top-left" />}
+          <color attach="background" args={["black"]} />
+          <CameraRig
+            key={`${sceneIndex}-${visiblePartIndex}-${visibleChapterIndex}`}
+            sceneIndex={sceneIndex}
             currentPart={visiblePartIndex + 1}
+            currentChapter={visibleChapterIndex + 1}
           />
-        </Suspense>
-        <pointLight position={[0, 5, 0]} intensity={1} color="white" />
-        <OrbitControls
-          key={`${visiblePartIndex}-${visibleChapterIndex}`}
-          enableZoom={visiblePartIndex === 0 && visibleChapterIndex === 3 ? false : true}
-        />
-      </Canvas>
+          <Suspense fallback={null}>
+            <SceneManager
+              currentChapter={visibleChapterIndex + 1}
+              currentPart={visiblePartIndex + 1}
+            />
+          </Suspense>
+          <pointLight position={[0, 5, 0]} intensity={1} color="white" />
+          <OrbitControls
+            enableZoom={visiblePartIndex === 0 && visibleChapterIndex === 3 ? false : true}
+          />
+        </Canvas>
+      </CanvasErrorBoundary>
       <FadeOverlay opacity={fade} />
+      {showLoader && visiblePartIndex === 0 && (
+        <div className="loaderBackdropA" />
+      )}
       {warmLoader && <LoadingIndicatorA className="isHidden" text="Loading..." />}
       {showLoader && <LoaderComponent text={loaderText} />}
       <ChapterNav

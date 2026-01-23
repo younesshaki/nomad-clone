@@ -2,11 +2,6 @@ import { Center, GradientTexture, Stars, useGLTF } from "@react-three/drei";
 import { BackSide } from "three";
 import carUrl from "../../assets/bmw_optimized.glb?url";
 
-declare module "*.glb" {
-  const src: string;
-  export default src;
-}
-
 export default function Chapter4() {
   const { scene } = useGLTF(carUrl);
 
