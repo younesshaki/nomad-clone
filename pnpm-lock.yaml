@@ -23,6 +23,12 @@ importers:
       leva:
         specifier: ^0.9.35
         version: 0.9.36(@types/react@18.3.27)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      lil-gui:
+        specifier: ^0.21.0
+        version: 0.21.0
+      mersennetwister:
+        specifier: ^0.2.3
+        version: 0.2.3
       postprocessing:
         specifier: ^6.35.4
         version: 6.38.2(three@0.164.1)
@@ -1745,6 +1751,9 @@ packages:
     resolution: {integrity: sha512-utfs7Pr5uJyyvDETitgsaqSyjCb2qNRAtuqUeWIAKztsOYdcACf2KtARYXg2pSvhkt+9NfoaNY7fxjl6nuMjIQ==}
     engines: {node: '>= 12.0.0'}
 
+  lil-gui@0.21.0:
+    resolution: {integrity: sha512-tpvxN7v1GvE/Tv+GRopfOp0W7fVEjF4PltkuX8vOCIfim22rD1ztvfkoEMcv9lzQeuNUSeIrUmUjBwmlW/oUew==}
+
   listr2@8.3.3:
     resolution: {integrity: sha512-LWzX2KsqcB1wqQ4AHgYb4RsDXauQiqhjLk+6hjbaeHG4zpjjVAB6wC/gz6X0l+Du1cN3pUB5ZlrvTbhGSNnUQQ==}
     engines: {node: '>=18.0.0'}
@@ -1792,6 +1801,9 @@ packages:
   merge-value@1.0.0:
     resolution: {integrity: sha512-fJMmvat4NeKz63Uv9iHWcPDjCWcCkoiRoajRTEO8hlhUC6rwaHg0QCF9hBOTjZmm4JuglPckPSTtcuJL5kp0TQ==}
     engines: {node: '>=0.10.0'}
+
+  mersennetwister@0.2.3:
+    resolution: {integrity: sha512-r/Lx4L1jqZu8dsbDqw2d+EgRXf4F/yLTUbuMHUstDge9EsLAlANEvooy1u4YcgLOCV7GEmpxMGKtIhxFhhJqNA==}
 
   meshline@3.3.1:
     resolution: {integrity: sha512-/TQj+JdZkeSUOl5Mk2J7eLcYTLiQm2IDzmlSvYm7ov15anEcDJ92GHqqazxTSreeNgfnYu24kiEvvv0WlbCdFQ==}
@@ -3947,6 +3959,8 @@ snapshots:
       lightningcss-win32-arm64-msvc: 1.30.2
       lightningcss-win32-x64-msvc: 1.30.2
 
+  lil-gui@0.21.0: {}
+
   listr2@8.3.3:
     dependencies:
       cli-truncate: 4.0.0
@@ -4007,6 +4021,8 @@ snapshots:
       is-extendable: 1.0.1
       mixin-deep: 1.3.2
       set-value: 2.0.1
+
+  mersennetwister@0.2.3: {}
 
   meshline@3.3.1(three@0.164.1):
     dependencies:

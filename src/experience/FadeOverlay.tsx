@@ -7,7 +7,6 @@ export default function FadeOverlay({ opacity }: FadeOverlayProps) {
     return null;
   }
 
-  console.log("FadeOverlay rendering with opacity:", opacity);
   return (
     <div
       style={{
@@ -19,7 +18,7 @@ export default function FadeOverlay({ opacity }: FadeOverlayProps) {
         backgroundColor: "black",
         opacity: Math.max(0, Math.min(1, opacity)),
         pointerEvents: opacity > 0.01 ? "auto" : "none",
-        zIndex: 500,
+        zIndex: 2000,
         transition: "none",
       }}
       data-testid="fade-overlay"

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { Part } from "../parts";
 import "./ChapterNav.css";
 
@@ -152,6 +152,16 @@ export default function ChapterNav({
 }: ChapterNavProps) {
   const activePart = parts[activePartIndex];
   const activeChapters = activePart?.chapters ?? [];
+  const chapterOffsets = useMemo(() => {
+    let sum = 0;
+    return parts.map((part) => {
+      const offset = sum;
+      sum += part.chapters.length;
+      return offset;
+    });
+  }, [parts]);
+  const getGlobalChapterNumber = (partIndex: number, chapterIndex: number) =>
+    (chapterOffsets[partIndex] ?? 0) + chapterIndex + 1;
   const canPrevPart = activePartIndex > 0;
   const canNextPart = activePartIndex < parts.length - 1;
   const canPrevChapter = activeChapterIndex > 0;
@@ -200,7 +210,7 @@ export default function ChapterNav({
         value={activeChapterIndex}
         options={activeChapters.map((chapter, index) => ({
           value: index,
-          label: chapter.title,
+          label: `Chapter ${getGlobalChapterNumber(activePartIndex, index)}: ${chapter.title}`,
         }))}
         onChange={(nextChapter) => onSelectionChange(activePartIndex, nextChapter)}
         disabled={activeChapters.length === 0}

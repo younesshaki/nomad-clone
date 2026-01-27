@@ -53,4 +53,14 @@ export const parts: Part[] = [
       { title: "Legacy" },
     ],
   },
+  {
+    title: "Finale",
+    chapters: [
+      { title: "Chapter 1" },
+      { title: "Chapter 2" },
+      { title: "Chapter 3" },
+      { title: "Chapter 4" },
+      { title: "Chapter 5" },
+    ],
+  },
 ];

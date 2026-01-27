@@ -1,18 +1,35 @@
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import { useGLTF } from "@react-three/drei";
 import * as THREE from "three";
 
 export function useDisposableGLTF(url: string) {
   const gltf = useGLTF(url);
+  const clonedScene = useMemo(() => {
+    const cloned = gltf.scene.clone(true);
+    cloned.traverse((child) => {
+      if (!(child instanceof THREE.Mesh)) {
+        return;
+      }
+      // child.geometry = child.geometry.clone(); // Removed to save GPU memory
+
+      if (Array.isArray(child.material)) {
+        child.material = child.material.map((material) => material.clone());
+      } else if (child.material) {
+        child.material = child.material.clone();
+      }
+    });
+    return cloned;
+  }, [gltf.scene]);
 
   useEffect(() => {
     return () => {
-      gltf.scene.traverse((child) => {
+      clonedScene.traverse((child) => {
         if (!(child instanceof THREE.Mesh)) {
           return;
         }
 
-        child.geometry?.dispose();
+        // Do not dispose geometry since it is now shared from the useGLTF cache
+        // child.geometry?.dispose();
 
         const materials = Array.isArray(child.material)
           ? child.material
@@ -23,17 +40,11 @@ export function useDisposableGLTF(url: string) {
             return;
           }
 
-          Object.values(material).forEach((value) => {
-            if (value instanceof THREE.Texture) {
-              value.dispose();
-            }
-          });
-
           material.dispose();
         });
       });
     };
-  }, [gltf.scene]);
+  }, [clonedScene]);
 
-  return gltf;
+  return { ...gltf, scene: clonedScene };
 }

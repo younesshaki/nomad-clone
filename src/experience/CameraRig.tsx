@@ -1,76 +1,36 @@
 import { useFrame, useThree } from "@react-three/fiber";
 import { useEffect, useRef } from "react";
-import { CatmullRomCurve3, PerspectiveCamera, Vector3 } from "three";
+import { CatmullRomCurve3, PerspectiveCamera } from "three";
 import gsap from "gsap";
 import CustomEase from "gsap/CustomEase";
 import { createNoise3D } from "simplex-noise";
+import { getCameraConfig, CameraConfig } from "./cameraConfigs";
 
 gsap.registerPlugin(CustomEase);
 const noise3D = createNoise3D();
 
-type ChapterPose = {
-  rig: [number, number, number];
-  target: [number, number, number];
-  duration?: number;
-  ease?: string;
-  fov?: number;
-  cameraType?: "dolly" | "crane" | "handheld" | "static";
-};
-
-const chapterPoses: Record<number, ChapterPose> = {
-  1: {
-    rig: [0, 0, 5],
-    target: [0, 0, 0],
-    duration: 3.5,
-    ease: "power2.inOut",
-    fov: 75,
-    cameraType: "crane",
-  },
-  2: {
-    rig: [0, 0, 7],
-    target: [0, 0, 0],
-    duration: 2.8,
-    ease: "expo.inOut",
-    fov: 60,
-    cameraType: "dolly",
-  },
-  3: {
-    rig: [0, 0, 1],
-    target: [0, 0, 0],
-    duration: 1.8,
-    ease: "back.out(1.4)",
-    fov: 90,
-    cameraType: "handheld",
-  },
-  4: {
-    rig: [0, 0, 5],
-    target: [0, 0, 0],
-    duration: 4.2,
-    ease: "circ.inOut",
-    fov: 75,
-    cameraType: "static",
-  },
-};
-
-const chapterPaths: Record<number, Vector3[]> = {
-  1: [new Vector3(-3, 2, 8), new Vector3(-1, 1, 6), new Vector3(0, 0, 5)],
-  3: [new Vector3(0, 0, 5), new Vector3(2, -1, 3), new Vector3(0, 0, 1)],
+// Default fallback config
+const DEFAULT_CONFIG: CameraConfig = {
+  position: [0, 0, 5],
+  target: [0, 0, 0],
+  duration: 2.5,
+  ease: "power2.inOut",
+  fov: 75,
+  type: "static",
 };
 
 export default function CameraRig({
   sceneIndex,
   currentPart,
   currentChapter,
+  enabled,
 }: {
   sceneIndex: number;
   currentPart: number;
   currentChapter: number;
+  enabled: boolean;
 }) {
   const { camera } = useThree();
-  const lastLogRef = useRef(0);
-  const lastPoseRef = useRef<{ pos: [number, number, number]; rot: [number, number, number] } | null>(null);
-  // Toggle this off before production to remove camera console logging.
-  const ENABLE_CAMERA_LOG = import.meta.env.DEV;
   const timelineRef = useRef<gsap.core.Timeline | null>(null);
   const autoRotateRef = useRef(false);
   const rotateTargetRef = useRef<[number, number, number]>([0, 0, 0]);
@@ -79,6 +39,9 @@ export default function CameraRig({
   const shakeRotZRef = useRef(0);
 
   useFrame((_, delta) => {
+    if (!enabled) {
+      return;
+    }
     if (autoRotateRef.current) {
       const target = rotateTargetRef.current;
       const dx = camera.position.x - target[0];
@@ -121,55 +84,48 @@ export default function CameraRig({
       shakeOffsetRef.current = [0, 0, 0];
       shakeRotZRef.current = 0;
     }
-
-    // Camera logging (disabled)
-    // if (!ENABLE_CAMERA_LOG) return;
-    // const now = performance.now();
-    // if (now - lastLogRef.current < 200) return;
-    //
-    // const pos: [number, number, number] = [
-    //   Number(camera.position.x.toFixed(2)),
-    //   Number(camera.position.y.toFixed(2)),
-    //   Number(camera.position.z.toFixed(2)),
-    // ];
-    // const rot: [number, number, number] = [
-    //   Number(camera.rotation.x.toFixed(2)),
-    //   Number(camera.rotation.y.toFixed(2)),
-    //   Number(camera.rotation.z.toFixed(2)),
-    // ];
-    //
-    // const last = lastPoseRef.current;
-    // const moved =
-    //   !last ||
-    //   pos.some((value, index) => value !== last.pos[index]) ||
-    //   rot.some((value, index) => value !== last.rot[index]);
-    //
-    // if (!moved) return;
-    //
-    // lastLogRef.current = now;
-    // lastPoseRef.current = { pos, rot };
-    //
-    // console.log("Camera", { position: pos, rotation: rot });
   });
 
   useEffect(() => {
-    const useBmwRig = sceneIndex === 4  || (currentPart === 2 && currentChapter === 1);
-    const targetSceneIndex = useBmwRig ? 4 : sceneIndex;
-    const pose = chapterPoses[targetSceneIndex] ?? chapterPoses[1];
-    const duration = pose.duration ?? 2.5;
-    const ease = pose.ease ?? "power3.inOut";
+    if (!enabled) {
+      timelineRef.current?.kill();
+      timelineRef.current = null;
+      autoRotateRef.current = false;
+      shakeIntensityRef.current = 0;
+      if (shakeOffsetRef.current[0] || shakeOffsetRef.current[1] || shakeOffsetRef.current[2]) {
+        camera.position.x -= shakeOffsetRef.current[0];
+        camera.position.y -= shakeOffsetRef.current[1];
+        camera.position.z -= shakeOffsetRef.current[2];
+        shakeOffsetRef.current = [0, 0, 0];
+      }
+      if (shakeRotZRef.current) {
+        camera.rotation.z -= shakeRotZRef.current;
+        shakeRotZRef.current = 0;
+      }
+      return;
+    }
+
+    // Director Pattern: Get config for current chapter
+    const config = getCameraConfig(currentPart, currentChapter) ?? DEFAULT_CONFIG;
+    
+    const duration = config.duration;
+    const ease = config.ease;
+    
     timelineRef.current?.kill();
     autoRotateRef.current = false;
-    rotateTargetRef.current = pose.target;
-    if (currentPart === 1 && currentChapter === 4) {
-      shakeIntensityRef.current = 0.04;
+    rotateTargetRef.current = config.target;
+    
+    // Config can force shake, or we default based on type
+    if (config.shakeIntensity !== undefined) {
+      shakeIntensityRef.current = config.shakeIntensity;
     } else {
-      shakeIntensityRef.current = pose.cameraType === "handheld" ? 0.02 : 0;
+      shakeIntensityRef.current = config.type === "handheld" ? 0.02 : 0;
     }
 
     const tl = gsap.timeline();
     timelineRef.current = tl;
-    const path = chapterPaths[targetSceneIndex];
+    const path = config.path;
+
     if (path && path.length > 2) {
       const curve = new CatmullRomCurve3(path);
       const tState = { t: 0 };
@@ -180,7 +136,7 @@ export default function CameraRig({
         onUpdate: () => {
           const point = curve.getPoint(tState.t);
           camera.position.copy(point);
-          camera.lookAt(...pose.target);
+          camera.lookAt(...config.target);
         },
       });
     } else {
@@ -191,24 +147,24 @@ export default function CameraRig({
         ease: "power2.in",
       })
         .to(camera.position, {
-          x: pose.rig[0],
-          y: pose.rig[1],
-          z: pose.rig[2] - 0.2,
+          x: config.position[0],
+          y: config.position[1],
+          z: config.position[2] - 0.2,
           duration,
           ease: "power3.out",
         })
         .to(camera.position, {
-          z: pose.rig[2],
+          z: config.position[2],
           duration: 0.4,
           ease: "power2.out",
         });
     }
 
-    if (pose.fov && camera instanceof PerspectiveCamera) {
+    if (config.fov && camera instanceof PerspectiveCamera) {
       tl.to(
         camera,
         {
-          fov: pose.fov,
+          fov: config.fov,
           duration,
           ease,
           onUpdate: () => {
@@ -227,14 +183,14 @@ export default function CameraRig({
           duration: duration * 0.8,
           ease: "power2.out",
           onUpdate: () => {
-            camera.lookAt(...pose.target);
+            camera.lookAt(...config.target);
           },
         },
         0.2,
       );
     }
 
-    if (useBmwRig) {
+    if (config.useBmwRig) {
       tl.to(camera.position, {
         x: -2.08,
         y: 1.12,
@@ -251,12 +207,13 @@ export default function CameraRig({
         autoRotateRef.current = true;
       });
     }
+    
     camera.updateProjectionMatrix();
 
     return () => {
       tl.kill();
     };
-  }, [camera, sceneIndex, currentPart, currentChapter]);
+  }, [camera, currentPart, currentChapter, enabled]); // removed sceneIndex dependency as it is now derived from part/chapter
 
   return null;
 }

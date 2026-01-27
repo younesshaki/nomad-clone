@@ -1,9 +1,11 @@
 import { useEffect } from "react";
-import { ALL_SCENE_ASSETS, preloadAssetUrls } from "./sceneAssets";
+import { preloadSceneAssets } from "./sceneAssets";
 
 export function ModelPreloader() {
   useEffect(() => {
-    preloadAssetUrls(ALL_SCENE_ASSETS);
+    // Only preload the entry scene to save bandwidth/memory. 
+    // Subsequent chapters are preloaded smartly in Experience.tsx
+    preloadSceneAssets(1, 1);
   }, []);
 
   return null;
