@@ -13,7 +13,7 @@
     "@react-three/fiber": "^8.16.6",
     "@react-three/postprocessing": "^2.16.2",
     "gsap": "^3.12.5",
-    "leva": "^0.9.35",
+    "leva": "^0.10.1",
     "lil-gui": "^0.21.0",
     "mersennetwister": "^0.2.3",
     "postprocessing": "^6.35.4",
