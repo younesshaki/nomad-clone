@@ -744,12 +744,6 @@ class DolphinSystem {
     pixelRatio: number
   ) {
     this.root = root;
-    this.material = new THREE.MeshBasicMaterial({
-      color: 0x6fd3fb,
-      wireframe: true,
-      skinning: true
-    }) as any;
-    /*
     this.material = new THREE.ShaderMaterial({
       vertexShader: dolphinVertexShader,
       fragmentShader: dolphinFragmentShader,
@@ -761,11 +755,7 @@ class DolphinSystem {
       transparent: true,
       depthWrite: false,
       depthTest: false,
-      side: THREE.DoubleSide, // Ensure backfaces don't cull
     });
-    */
-    // DEBUG: Use Basic Material to verify geometry existence
-    // this.material = new THREE.MeshBasicMaterial({ color: 0xff00ff, wireframe: true, skinning: true }) as any;
     // this.material.skinning = true; // No longer needed here as we set it per clone
 
     this.dolphin = SkeletonUtils.clone(gltf) as THREE.Group;
@@ -780,9 +770,6 @@ class DolphinSystem {
         } else {
           meshMaterial.skinning = false;
         }
-        // Ensure standard properties preventing culling are set
-        meshMaterial.side = THREE.DoubleSide; 
-
 
         this.dolphinMaterials.push(meshMaterial);
 
@@ -815,30 +802,23 @@ class DolphinSystem {
 
   private setAnimation(animations: THREE.AnimationClip[]) {
     if (!animations || animations.length === 0) {
-      console.warn("DolphinSystem: No animations found!");
       return;
     }
-    console.log("DolphinSystem: Setting up animations", animations.length);
 
     this.animationMixer = new THREE.AnimationMixer(this.dolphin);
-    // Clone clip to be safe
-    const clip = animations[0].clone();
-    this.animationAction = this.animationMixer.clipAction(clip);
+    this.animationAction = this.animationMixer.clipAction(animations[0]);
     this.animationAction.play();
-    console.log("DolphinSystem: Animation playing", clip.name, clip.duration);
   }
 
   private setupSurfaceSampling(pixelRatio: number) {
     this.dolphinMesh = null;
     this.dolphin.traverse((child) => {
-      // Find the skinned mesh again within the clone
       if (child instanceof THREE.SkinnedMesh) {
         this.dolphinMesh = child;
       }
     });
 
     if (!this.dolphinMesh) {
-      console.warn("DolphinSystem: Could not find SkinnedMesh in cloned dolphin for sampling");
       return;
     }
 
@@ -1104,11 +1084,10 @@ class DolphinSystem {
   update(delta: number, elapsed: number) {
     if (this.animationMixer) {
       this.animationMixer.update(delta);
-      // console.log("DolphinSystem: Mixer update", delta);
     }
 
     this.dolphinMaterials.forEach((mat) => {
-      if ('uniforms' in mat && mat.uniforms && mat.uniforms.uTime) {
+      if (mat.uniforms.uTime) {
         mat.uniforms.uTime.value = elapsed;
       }
     });
@@ -1258,12 +1237,14 @@ class WakeParticlesSystem {
   }
 
   private setupSurfaceSampling() {
-    this.dolphinMesh = this.dolphinSystem.dolphinMesh;
-    if (!this.dolphinMesh) {
+    const dolphinMesh = this.dolphinSystem.dolphinMesh;
+    if (!dolphinMesh) {
       return;
     }
 
-    const geometry = this.dolphinMesh.geometry;
+    this.dolphinMesh = dolphinMesh;
+
+    const geometry = dolphinMesh.geometry;
     const posAttr = geometry.getAttribute("position");
 
     const weights = new Float32Array(posAttr.count);
@@ -1384,6 +1365,24 @@ class WakeParticlesSystem {
       return;
     }
     this._updateFrameSkip = 0;
+
+    if (this.dolphinSystem.dolphin) {
+      const currentPos = this.dolphinSystem.dolphin.position;
+      const currentRot = this.dolphinSystem.dolphin.quaternion;
+
+      const posChanged =
+        this._lastDolphinPosition.distanceToSquared(currentPos) >
+        this._positionChangeThreshold * this._positionChangeThreshold;
+      const rotChanged =
+        Math.abs(this._lastDolphinRotation.dot(currentRot)) < 0.9999;
+
+      if (!posChanged && !rotChanged && this._lastDolphinPosition.lengthSq() > 0) {
+        return;
+      }
+
+      this._lastDolphinPosition.copy(currentPos);
+      this._lastDolphinRotation.copy(currentRot);
+    }
 
     if (this.dolphinMesh.skeleton) {
       this.dolphinMesh.skeleton.update();
@@ -1663,7 +1662,6 @@ export default function CyberOcean({
   }, [environmentMap, isActive, scene]);
 
   useEffect(() => {
-    /*
     if (!isActive) {
       return;
     }
@@ -1706,17 +1704,14 @@ export default function CyberOcean({
       }
       cameraGroupRef.current = null;
     };
-    */
   }, [allowControls, baseCameraPosition, camera, isActive, scene]);
 
   useEffect(() => {
-    /*
     if (!isActive) {
       return;
     }
 
     camera.position.copy(baseCameraPosition);
-    */
   }, [baseCameraPosition, camera, isActive]);
 
   useEffect(() => {
@@ -1772,11 +1767,9 @@ export default function CyberOcean({
     gl.sortObjects = false;
     gl.setClearColor(0x001235, 1);
 
-    /*
     const postProcessing = new PostProcessingSystem(scene, camera, gl);
     postProcessing.resize(size.width, size.height);
     postProcessingRef.current = postProcessing;
-    */
 
     const previousAutoClear = gl.autoClear;
     gl.autoClear = true;
@@ -1784,8 +1777,6 @@ export default function CyberOcean({
     return () => {
       gl.autoClear = previousAutoClear;
       gl.toneMapping = prevToneMapping;
-      // ...
-    };
       gl.outputColorSpace = prevColorSpace;
       gl.sortObjects = prevSortObjects;
       gl.setClearColor(prevClearColor, prevClearAlpha);
@@ -1898,12 +1889,11 @@ export default function CyberOcean({
     }
 
     if (!allowControls) {
-      // camera.lookAt(DOLPHIN_FOCUS_TARGET);
+      camera.lookAt(DOLPHIN_FOCUS_TARGET);
     }
 
     const systems = systemsRef.current;
     if (systems) {
-      // console.log("CyberOcean: Update Dolphin");
       systems.seabed.update(elapsed);
       systems.wormhole.update(delta);
 
@@ -1925,25 +1915,30 @@ export default function CyberOcean({
   });
 
   useFrame((state) => {
-    /*
     if (!isActive) {
       return;
     }
 
-    try {
+    // Temporary fix: Bypass PostProcessing to check if scene renders
+    // const postProcessing = postProcessingRef.current;
+    
+    // if (!postProcessing) {
       state.gl.render(state.scene, state.camera);
-       } catch (e) {
-      console.error("CyberOcean: Render loop error", e);
-    }
-    */
+      // return;
+    // }
+
+    // postProcessing.update(
+    //   state.clock.elapsedTime,
+    //   deltaRef.current,
+    //   mouseRef.current.velocity,
+    //   dragRef.current
+    // );
+
+    // postProcessing.render();
   }, 1);
 
   return (
     <group ref={rootRef}>
-      <mesh position={[0, 0.5, 0]}>
-        <boxGeometry args={[1, 1, 1]} />
-        <meshBasicMaterial color="red" />
-      </mesh>
       <ambientLight intensity={0.45} color="#8cc8ff" />
       <hemisphereLight intensity={0.4} color="#6fd3fb" groundColor="#08121f" />
       <directionalLight position={[2, 2, -2]} intensity={4} color="#ffffff" />

@@ -6,6 +6,8 @@ export const chapter1Scenes: NarrativeScene[] = [
     id: "scene-1",
     title: "The Rebel Princess",
     voiceOver: chapter1VoiceOvers["scene-1"],
+    voiceOverStartOffset: 2.2,
+    voiceOverEndOffset: 1.1,
     lines: [
       { text: "She went to private schools.", className: "typewriter" },
       { text: "Pristine uniforms. Strict dress codes.", className: "typewriter" },

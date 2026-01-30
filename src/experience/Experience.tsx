@@ -115,6 +115,41 @@ export default function Experience() {
   const [preloadGateOpen, setPreloadGateOpen] = useState(false);
   const controlsRef = useRef<OrbitControlsImpl | null>(null);
   const transitionRef = useRef<gsap.core.Timeline | null>(null);
+  const handleCanvasCreated = useCallback((state: unknown) => {
+    if (import.meta.env.DEV) {
+      (window as { __r3f?: unknown }).__r3f = state;
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!import.meta.env.DEV) {
+      return;
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key.toLowerCase() !== "p") {
+        return;
+      }
+      const state = (window as { __r3f?: { camera?: unknown } }).__r3f;
+      const camera = state?.camera as
+        | { position?: { x: number; y: number; z: number }; fov?: number }
+        | undefined;
+
+      if (!camera?.position) {
+        console.warn("Camera not ready yet.");
+        return;
+      }
+
+      const { x, y, z } = camera.position;
+      const fov = camera.fov ?? 0;
+      console.log(
+        `makeAngle([${x.toFixed(2)}, ${y.toFixed(2)}, ${z.toFixed(2)}], { fov: ${fov.toFixed(0)} })`
+      );
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
   const loaderTextByPart = [
     "Loading Genesis",
     "Loading Trials",
@@ -302,6 +337,7 @@ export default function Experience() {
               stencil: false,
               depth: true
             }}
+            onCreated={handleCanvasCreated}
             style={{
               width: "100%",
               height: "100%",

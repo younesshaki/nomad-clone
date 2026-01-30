@@ -7,5 +7,9 @@ type Chapter1TimelineOptions = {
 };
 
 export function useChapter1Timeline(options: Chapter1TimelineOptions) {
-  useBasicTimeline(options);
+  useBasicTimeline({
+    ...options,
+    introDuration: 5.6,
+    introRevealLead: 1.4,
+  });
 }

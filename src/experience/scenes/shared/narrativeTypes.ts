@@ -7,6 +7,13 @@ type NarrativeSceneBase = {
   id: string;
   title: string;
   voiceOver?: string | null;
+  voiceOverStartOffset?: number;
+  voiceOverEndOffset?: number;
+  position?: {
+    x: number;
+    y: number;
+    align?: "left" | "center" | "right";
+  };
 };
 
 type NarrativeSceneSingle = NarrativeSceneBase & {

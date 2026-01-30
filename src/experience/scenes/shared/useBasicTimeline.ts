@@ -5,11 +5,18 @@ import { useSoundSettings } from "../../soundContext";
 type BasicTimelineOptions = {
   overlayRef: RefObject<HTMLDivElement>;
   isActive: boolean;
+  introDuration?: number;
+  introRevealLead?: number;
 };
 
 type VoiceOverMap = Record<string, HTMLAudioElement>;
 
-export function useBasicTimeline({ overlayRef, isActive }: BasicTimelineOptions) {
+export function useBasicTimeline({
+  overlayRef,
+  isActive,
+  introDuration,
+  introRevealLead,
+}: BasicTimelineOptions) {
   const scrollProgressRef = useRef(0);
   const scrollEnabledRef = useRef(false);
   const soundStateRef = useRef({ enabled: true, blocked: false });
@@ -71,9 +78,15 @@ export function useBasicTimeline({ overlayRef, isActive }: BasicTimelineOptions)
           return;
         }
 
-        const totalDuration = sceneDuration + step * (sceneEntries.length - 1);
-        const introHold = Math.min(4, sceneDuration * 0.35);
-        const MIN_SCROLL_PROGRESS = introHold / totalDuration;
+        const introHold = Math.max(
+          0,
+          introDuration ?? Math.min(5, sceneDuration * 0.45)
+        );
+        const revealLead = Math.max(0, introRevealLead ?? 0);
+        const timelineOffset = Math.max(0, introHold - revealLead);
+        const totalDuration =
+          timelineOffset + sceneDuration + step * (sceneEntries.length - 1);
+        const MIN_SCROLL_PROGRESS = timelineOffset / totalDuration;
         const MAX_SCROLL_PROGRESS = 1;
 
         const tl = gsap.timeline({ paused: true });
@@ -115,14 +128,16 @@ export function useBasicTimeline({ overlayRef, isActive }: BasicTimelineOptions)
         };
 
         const revealScene = (sceneSelector: string, startTime: number, lineStagger = 0.2) => {
-          tl.set(sceneSelector, { autoAlpha: 1 }, startTime);
+          const innerSelector = `${sceneSelector} .narrativeSceneInner`;
+          tl.set(innerSelector, { autoAlpha: 1 }, startTime);
           revealTitle(`${sceneSelector} .narrativeTitle`, startTime + 0.3);
           cinematicReveal(`${sceneSelector} .narrativeLine`, startTime + 0.6, lineStagger);
         };
 
         const exitScene = (sceneSelector: string, endTime: number) => {
+          const innerSelector = `${sceneSelector} .narrativeSceneInner`;
           tl.to(
-            sceneSelector,
+            innerSelector,
             {
               y: -60,
               autoAlpha: 0,
@@ -146,6 +161,11 @@ export function useBasicTimeline({ overlayRef, isActive }: BasicTimelineOptions)
             return;
           }
 
+          const startOffset = Number.parseFloat(sceneEl.dataset.voiceoverStart ?? "0") || 0;
+          const endOffset = Number.parseFloat(sceneEl.dataset.voiceoverEnd ?? "0") || 0;
+          const audioStart = start + startOffset;
+          const audioEnd = Math.max(audioStart + audioFade, end - endOffset);
+
           if (!audioMap[sceneId]) {
             const audio = new Audio(voiceOverUrl);
             audio.preload = "auto";
@@ -166,7 +186,7 @@ export function useBasicTimeline({ overlayRef, isActive }: BasicTimelineOptions)
             if (playPromise?.catch) {
               playPromise.catch(() => {});
             }
-          }, undefined, start);
+          }, undefined, audioStart);
 
           tl.to(
             audio,
@@ -175,7 +195,7 @@ export function useBasicTimeline({ overlayRef, isActive }: BasicTimelineOptions)
               duration: audioFade,
               ease: "power1.out",
             },
-            start
+            audioStart
           );
 
           tl.to(
@@ -185,19 +205,19 @@ export function useBasicTimeline({ overlayRef, isActive }: BasicTimelineOptions)
               duration: audioFade,
               ease: "power1.in",
             },
-            Math.max(end - audioFade, start + audioFade)
+            Math.max(audioEnd - audioFade, audioStart + audioFade)
           );
 
           tl.call(() => {
             audio.pause();
             audio.currentTime = 0;
-          }, undefined, end);
+          }, undefined, audioEnd);
         };
 
-        tl.set(".narrativeScene", { autoAlpha: 0 });
+        tl.set(".narrativeSceneInner", { autoAlpha: 0 });
 
         sceneEntries.forEach((entry, index) => {
-          const start = index * step;
+          const start = timelineOffset + index * step;
           const end = start + sceneDuration;
           const sceneSelector = `.narrativeScene.${entry.id}`;
 
@@ -217,8 +237,8 @@ export function useBasicTimeline({ overlayRef, isActive }: BasicTimelineOptions)
           { progress: 0 },
           {
             progress: MIN_SCROLL_PROGRESS,
-            duration: 2,
-            ease: "power1.inOut",
+            duration: introHold || 0.01,
+            ease: "power2.inOut",
             onUpdate: () => {
               scrollProgressRef.current = tl.progress();
             },

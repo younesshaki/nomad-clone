@@ -37,9 +37,10 @@ export default function CameraRig({
   const shakeIntensityRef = useRef(0);
   const shakeOffsetRef = useRef<[number, number, number]>([0, 0, 0]);
   const shakeRotZRef = useRef(0);
+  const isScrollChapter = currentPart === 1 && currentChapter === 1;
 
   useFrame((_, delta) => {
-    if (!enabled) {
+    if (!enabled || isScrollChapter) {
       return;
     }
     if (autoRotateRef.current) {
@@ -91,6 +92,25 @@ export default function CameraRig({
       timelineRef.current?.kill();
       timelineRef.current = null;
       autoRotateRef.current = false;
+      shakeIntensityRef.current = 0;
+      if (shakeOffsetRef.current[0] || shakeOffsetRef.current[1] || shakeOffsetRef.current[2]) {
+        camera.position.x -= shakeOffsetRef.current[0];
+        camera.position.y -= shakeOffsetRef.current[1];
+        camera.position.z -= shakeOffsetRef.current[2];
+        shakeOffsetRef.current = [0, 0, 0];
+      }
+      if (shakeRotZRef.current) {
+        camera.rotation.z -= shakeRotZRef.current;
+        shakeRotZRef.current = 0;
+      }
+      return;
+    }
+
+    if (isScrollChapter) {
+      timelineRef.current?.kill();
+      timelineRef.current = null;
+      autoRotateRef.current = false;
+      rotateTargetRef.current = [-2.6, -0.6, 0];
       shakeIntensityRef.current = 0;
       if (shakeOffsetRef.current[0] || shakeOffsetRef.current[1] || shakeOffsetRef.current[2]) {
         camera.position.x -= shakeOffsetRef.current[0];
