@@ -19,6 +19,7 @@ export function useScrollCamera({ isActive, narrativeRef, enabled }: UseScrollCa
   const introTweenRef = useRef<gsap.core.Timeline | null>(null);
   const introCompleteRef = useRef(false);
   const rafRef = useRef<number | null>(null);
+  const hasInitializedRef = useRef(false);
 
   useEffect(() => {
     activeIndexRef.current = activeParagraphIndex;
@@ -34,54 +35,10 @@ export function useScrollCamera({ isActive, narrativeRef, enabled }: UseScrollCa
     }
 
     hasUserScrolledRef.current = false;
-    activeIndexRef.current = 0;
-    setActiveParagraphIndex(0);
     introCompleteRef.current = false;
 
     introTweenRef.current?.kill();
     introTweenRef.current = null;
-
-    const introAngle = getCameraAngle(0);
-    const introStart: [number, number, number] = [1.82, -4.99, 1.24];
-    camera.position.set(...introStart);
-    camera.lookAt(...introAngle.target);
-    if (camera instanceof PerspectiveCamera) {
-      camera.fov = introAngle.fov ?? 78;
-      camera.updateProjectionMatrix();
-    }
-
-    const introTl = gsap.timeline({
-      onComplete: () => {
-        introCompleteRef.current = true;
-      },
-    });
-    introTweenRef.current = introTl;
-
-    introTl.to(camera.position, {
-      x: introAngle.position[0],
-      y: introAngle.position[1],
-      z: introAngle.position[2],
-      duration: introAngle.duration ?? 5.6,
-      ease: introAngle.ease ?? "power2.inOut",
-      onUpdate: () => {
-        camera.lookAt(introAngle.target[0], introAngle.target[1], introAngle.target[2]);
-      },
-    });
-
-    if (introAngle.fov && camera instanceof PerspectiveCamera) {
-      introTl.to(
-        camera,
-        {
-          fov: introAngle.fov,
-          duration: introAngle.duration ?? 5.6,
-          ease: introAngle.ease ?? "power2.inOut",
-          onUpdate: () => {
-            camera.updateProjectionMatrix();
-          },
-        },
-        0
-      );
-    }
 
     const paragraphs = Array.from(
       narrativeRef.current.querySelectorAll<HTMLElement>("p.narrativeLine")
@@ -126,6 +83,77 @@ export function useScrollCamera({ isActive, narrativeRef, enabled }: UseScrollCa
 
       rafRef.current = window.requestAnimationFrame(tick);
     };
+
+    const resolveVisibleIndex = () => {
+      let bestIndex = 0;
+      let bestOpacity = 0;
+      for (let i = 0; i <= maxIndex; i += 1) {
+        const element = paragraphs[i];
+        const style = window.getComputedStyle(element);
+        if (style.visibility === "hidden" || style.display === "none") {
+          continue;
+        }
+        const opacity = Number.parseFloat(style.opacity || "0");
+        if (opacity > bestOpacity) {
+          bestOpacity = opacity;
+          bestIndex = i;
+        }
+      }
+      return { bestIndex, bestOpacity };
+    };
+
+    if (!hasInitializedRef.current) {
+      activeIndexRef.current = 0;
+      setActiveParagraphIndex(0);
+      const introAngle = getCameraAngle(0);
+      const introStart: [number, number, number] = [1.82, -4.99, 1.24];
+      camera.position.set(...introStart);
+      camera.lookAt(...introAngle.target);
+      if (camera instanceof PerspectiveCamera) {
+        camera.fov = introAngle.fov ?? 78;
+        camera.updateProjectionMatrix();
+      }
+
+      const introTl = gsap.timeline({
+        onComplete: () => {
+          introCompleteRef.current = true;
+          hasInitializedRef.current = true;
+        },
+      });
+      introTweenRef.current = introTl;
+
+      introTl.to(camera.position, {
+        x: introAngle.position[0],
+        y: introAngle.position[1],
+        z: introAngle.position[2],
+        duration: introAngle.duration ?? 5.6,
+        ease: introAngle.ease ?? "power2.inOut",
+        onUpdate: () => {
+          camera.lookAt(introAngle.target[0], introAngle.target[1], introAngle.target[2]);
+        },
+      });
+
+      if (introAngle.fov && camera instanceof PerspectiveCamera) {
+        introTl.to(
+          camera,
+          {
+            fov: introAngle.fov,
+            duration: introAngle.duration ?? 5.6,
+            ease: introAngle.ease ?? "power2.inOut",
+            onUpdate: () => {
+              camera.updateProjectionMatrix();
+            },
+          },
+          0
+        );
+      }
+    } else {
+      const { bestIndex } = resolveVisibleIndex();
+      activeIndexRef.current = bestIndex;
+      setActiveParagraphIndex(bestIndex);
+      introCompleteRef.current = true;
+      hasUserScrolledRef.current = true;
+    }
 
     window.addEventListener("wheel", handleUserScroll, { passive: true });
     window.addEventListener("touchmove", handleUserScroll, { passive: true });

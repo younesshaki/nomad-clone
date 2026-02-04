@@ -28,6 +28,7 @@ export function NarrativeOverlay({
   return (
     <Html
       fullscreen
+      portal={document.body}
       style={{
         pointerEvents: "none",
         zIndex: 200,

@@ -1,5 +1,4 @@
 import { useGLTF } from "@react-three/drei";
-import { chapterModelUrls as part1Chapter1Assets } from "./scenes/part1/chapter1/data/sceneAssets";
 import { chapterModelUrls as part1Chapter3Assets } from "./scenes/part1/chapter3/data/sceneAssets";
 import { chapterModelUrls as part1Chapter4Assets } from "./scenes/part1/chapter4/data/sceneAssets";
 import { chapterModelUrls as part2Chapter1Assets } from "./scenes/part2/chapter5/data/sceneAssets";
@@ -9,7 +8,6 @@ import { chapterModelUrls as part3Chapter1Assets } from "./scenes/part3/chapter9
 export type SceneAssetKey = `${number}-${number}`;
 
 const SCENE_ASSETS: Record<SceneAssetKey, string[]> = {
-  "1-1": part1Chapter1Assets,
   "1-3": part1Chapter3Assets,
   "1-4": part1Chapter4Assets,
   "2-1": part2Chapter1Assets,

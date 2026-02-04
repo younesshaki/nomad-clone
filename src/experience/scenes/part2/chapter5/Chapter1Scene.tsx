@@ -30,6 +30,7 @@ export function Chapter1Scene() {
         speed={0.5}
       />
       <ambientLight intensity={0.9} />
+      
       <Center>
         <primitive object={scene} scale={1} />
       </Center>

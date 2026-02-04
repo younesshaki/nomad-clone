@@ -9,6 +9,11 @@ type NarrativeSceneBase = {
   voiceOver?: string | null;
   voiceOverStartOffset?: number;
   voiceOverEndOffset?: number;
+  // standard = scroll-based. cinematic = auto-play, no scroll.
+  behavior?: "standard" | "cinematic";
+  // duration in seconds for cinematic scenes
+  duration?: number;
+  mode?: "2d" | "3d";
   position?: {
     x: number;
     y: number;
