@@ -3,6 +3,7 @@ import gsap from "gsap";
 import { ScrollTrigger } from "gsap/ScrollTrigger";
 import { useSoundSettings } from "../../soundContext";
 import { debugState } from "../../utils/DebugOverlay";
+import { audioSyncRegistry } from "../part1/chapter1/audioSync";
 
 // Register ScrollTrigger (may already be registered by useSmoothScroll, but safe to call again)
 gsap.registerPlugin(ScrollTrigger);
@@ -253,6 +254,8 @@ export function useBasicTimeline({
             audio.preload = "auto";
             audio.volume = 0;
             audioMap[sceneId] = audio;
+            // Register with audio sync for time-based image slideshows
+            audioSyncRegistry.registerAudio(sceneId, audio);
           }
 
           const audio = audioMap[sceneId];
@@ -583,6 +586,12 @@ export function useBasicTimeline({
       }
       
       stopAllAudio();
+      
+      // Unregister audio from sync registry
+      Object.keys(audioMap).forEach(sceneId => {
+        audioSyncRegistry.unregisterAudio(sceneId);
+      });
+      
       ctx?.revert();
     };
   }, [isActive, useScrollTrigger, onProgressUpdate]);

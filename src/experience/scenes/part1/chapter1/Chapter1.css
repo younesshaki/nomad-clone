@@ -134,6 +134,10 @@
   letter-spacing: 0.02em;
   margin-top: 0;
   max-width: 100%;
+  text-shadow: 
+    0 2px 4px rgba(0, 0, 0, 0.5),
+    0 4px 12px rgba(0, 0, 0, 0.4),
+    0 8px 24px rgba(0, 0, 0, 0.3);
 }
 
 .chapter1Title {
@@ -144,12 +148,19 @@
   margin-bottom: 24px;
   transform-origin: center bottom;
   font-weight: 700;
+  text-shadow: 
+    0 2px 4px rgba(0, 0, 0, 0.5),
+    0 4px 12px rgba(0, 0, 0, 0.4),
+    0 8px 24px rgba(0, 0, 0, 0.3);
 }
 
 .chapter1Line {
   font-size: clamp(16px, 1.8vw, 24px);
   margin: 0;
-  text-shadow: none;
+  text-shadow: 
+    0 1px 2px rgba(0, 0, 0, 0.6),
+    0 2px 8px rgba(0, 0, 0, 0.4),
+    0 4px 16px rgba(0, 0, 0, 0.3);
   transform-style: preserve-3d;
   transform-origin: center top;
   will-change: transform, opacity, filter;
@@ -171,11 +182,18 @@
   font-weight: 600;
   letter-spacing: 0.04em;
   color: #fdfbfb;
+  text-shadow: 
+    0 1px 3px rgba(0, 0, 0, 0.6),
+    0 3px 10px rgba(0, 0, 0, 0.4),
+    0 6px 20px rgba(0, 0, 0, 0.3);
 }
 
 .glow {
   color: #f9f3f3;
-  text-shadow: 0 0 18px rgba(0, 0, 0, 0.15);
+  text-shadow: 
+    0 0 18px rgba(255, 255, 255, 0.15),
+    0 2px 4px rgba(0, 0, 0, 0.5),
+    0 4px 12px rgba(0, 0, 0, 0.4);
 }
 
 .sceneColumns {
@@ -194,6 +212,10 @@
   text-align: center;
   font-style: italic;
   color: #ffffff;
+  text-shadow: 
+    0 1px 2px rgba(0, 0, 0, 0.6),
+    0 2px 8px rgba(0, 0, 0, 0.4),
+    0 4px 16px rgba(0, 0, 0, 0.3);
 }
 
 .final-line {
@@ -201,4 +223,8 @@
   font-weight: 600;
   letter-spacing: 0.05em;
   color: #f8f4f4;
+  text-shadow: 
+    0 2px 4px rgba(0, 0, 0, 0.5),
+    0 4px 12px rgba(0, 0, 0, 0.4),
+    0 8px 24px rgba(0, 0, 0, 0.3);
 }

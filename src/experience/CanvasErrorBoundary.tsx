@@ -26,6 +26,13 @@ export default class CanvasErrorBoundary extends Component<
     console.error("Canvas error boundary caught:", error);
   }
 
+  // Reset error state when key changes (triggered by parent re-render)
+  componentDidUpdate(prevProps: CanvasErrorBoundaryProps) {
+    if (this.state.hasError && prevProps.children !== this.props.children) {
+      this.setState({ hasError: false, error: undefined });
+    }
+  }
+
   render() {
     if (this.state.hasError) {
       return (

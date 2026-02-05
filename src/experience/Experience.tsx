@@ -1,7 +1,6 @@
 import { Canvas } from "@react-three/fiber";
-import { OrbitControls, AdaptiveDpr, AdaptiveEvents } from "@react-three/drei";
+import { OrbitControls } from "@react-three/drei";
 import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
-import { Perf } from "r3f-perf";
 import CameraRig from "./CameraRig";
 import SceneManager from "./SceneManager";
 import FadeOverlay from "./FadeOverlay";
@@ -17,6 +16,7 @@ import { ModelPreloader } from "./ModelPreloader";
 import { preloadSceneAssets, preloadAdjacentChapters } from "./sceneAssets";
 import { useLoadingController } from "./hooks/useLoadingController";
 import { SoundProvider } from "./soundContext";
+import { useSmoothScroll } from "./hooks/useSmoothScroll";
 
 type SceneLocation = {
   partIndex: number;
@@ -68,7 +68,45 @@ const getAdjacentScenes = (
   );
 };
 
+import { DebugOverlay, DebugPanel } from "./utils/DebugOverlay";
+
+// Wrapper component to handle the hook and conditional rendering
+function DebugWrapper({ enabled }: { enabled: boolean }) {
+  return enabled ? <DebugOverlay enabled={enabled} /> : null;
+}
+
 export default function Experience() {
+  const [debugEnabled, setDebugEnabled] = useState(false);
+
+  // Initialize Lenis smooth scroll + ScrollTrigger integration
+  // This enables scrub-based animations throughout the app
+  useSmoothScroll(true);
+
+  useEffect(() => {
+    console.log("[Experience] Component mounted, adding Q key listener");
+    
+    const handleKeyDown = (e: KeyboardEvent) => {
+      console.log("[Experience] Key pressed:", e.key);
+      // Q to toggle debug mode
+      if (e.key.toLowerCase() === "q") {
+        e.preventDefault();
+        setDebugEnabled((prev) => {
+          const newValue = !prev;
+          console.log("[DEV] Debug mode toggled to:", newValue);
+          return newValue;
+        });
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      console.log("[Experience] Removing Q key listener");
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, []);
+
+  // Log debug state on each render
+  console.log("[Experience] Render - debugEnabled:", debugEnabled);
+
   const { isLoading, progress } = useLoadingController();
   
   // URL Hash syncing logic
@@ -115,41 +153,6 @@ export default function Experience() {
   const [preloadGateOpen, setPreloadGateOpen] = useState(false);
   const controlsRef = useRef<OrbitControlsImpl | null>(null);
   const transitionRef = useRef<gsap.core.Timeline | null>(null);
-  const handleCanvasCreated = useCallback((state: unknown) => {
-    if (import.meta.env.DEV) {
-      (window as { __r3f?: unknown }).__r3f = state;
-    }
-  }, []);
-
-  useEffect(() => {
-    if (!import.meta.env.DEV) {
-      return;
-    }
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key.toLowerCase() !== "p") {
-        return;
-      }
-      const state = (window as { __r3f?: { camera?: unknown } }).__r3f;
-      const camera = state?.camera as
-        | { position?: { x: number; y: number; z: number }; fov?: number }
-        | undefined;
-
-      if (!camera?.position) {
-        console.warn("Camera not ready yet.");
-        return;
-      }
-
-      const { x, y, z } = camera.position;
-      const fov = camera.fov ?? 0;
-      console.log(
-        `makeAngle([${x.toFixed(2)}, ${y.toFixed(2)}, ${z.toFixed(2)}], { fov: ${fov.toFixed(0)} })`
-      );
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, []);
   const loaderTextByPart = [
     "Loading Genesis",
     "Loading Trials",
@@ -179,7 +182,7 @@ export default function Experience() {
   const shouldShowLoader = showLoader && !canHideLoader;
   const preloaderVisible = preloadGateOpen && !initialRevealReady;
   const scenesHidden = shouldShowLoader || preloaderVisible || fade > 0.01;
-  const cameraEnabled = !preloaderVisible && !shouldShowLoader;
+  const cameraEnabled = !preloaderVisible && !shouldShowLoader && !isCyberOcean;
 
   // Reset canHideLoader when chapter changes
   useEffect(() => {
@@ -337,7 +340,6 @@ export default function Experience() {
               stencil: false,
               depth: true
             }}
-            onCreated={handleCanvasCreated}
             style={{
               width: "100%",
               height: "100%",
@@ -346,10 +348,8 @@ export default function Experience() {
             }}
             camera={{ position: [0, 0, 5], fov: 75, far: 10000 }}
           >
-            <AdaptiveDpr pixelated />
-            <AdaptiveEvents />
-            {import.meta.env.DEV && <Perf position="top-left" />}
             <color attach="background" args={["black"]} />
+            {debugEnabled && <DebugWrapper enabled={debugEnabled} />}
             <CameraRig
               key={`${sceneIndex}-${visiblePartIndex}-${visibleChapterIndex}`}
               sceneIndex={sceneIndex}
@@ -398,6 +398,8 @@ export default function Experience() {
             onSelectionChange={handleSelectionChange}
           />
         )}
+        {/* Debug panel rendered outside Canvas to avoid R3F reconciler issues */}
+        <DebugPanel enabled={debugEnabled} />
       </div>
     );
   }

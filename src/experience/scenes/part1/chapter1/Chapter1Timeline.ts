@@ -2,6 +2,7 @@ import { useEffect, useRef, type RefObject } from "react";
 import gsap from "gsap";
 import { useSoundSettings } from "../../../soundContext";
 import { chapter1DirectorTrack } from "./data/directorTrack";
+import { debugState } from "../../../utils/DebugOverlay";
 
 type Chapter1TimelineOptions = {
   overlayRef: RefObject<HTMLDivElement>;
@@ -165,6 +166,21 @@ export function useChapter1Timeline(options: Chapter1TimelineOptions) {
         activeSceneRef.current = activeAct.sceneId;
         activeAudioRef.current = audio;
         activeAudioGroupRef.current = activeGroup;
+        
+        // Update debug VO state
+        debugState.audioGroup = activeGroup;
+      }
+      
+      // Update VO playback state for debug
+      if (activeAudioRef.current) {
+        const audio = activeAudioRef.current;
+        debugState.voPlaying = !audio.paused;
+        debugState.voCurrentTime = audio.currentTime;
+        debugState.voDuration = audio.duration || 0;
+      } else {
+        debugState.voPlaying = false;
+        debugState.voCurrentTime = 0;
+        debugState.voDuration = 0;
       }
     };
 
@@ -174,6 +190,47 @@ export function useChapter1Timeline(options: Chapter1TimelineOptions) {
       }
       timeline.progress(nextProgress);
       scrollProgressRef.current = nextProgress;
+      
+      const totalDuration = totalDurationRef.current;
+      const currentTime = nextProgress * totalDuration;
+      
+      // Update debug state for overlay
+      debugState.scrollProgress = nextProgress;
+      debugState.totalDuration = totalDuration;
+      debugState.currentTime = currentTime;
+      debugState.currentPart = 1;
+      debugState.currentChapter = 1;
+      debugState.sceneRanges = actRangesRef.current;
+      
+      // Find active scene for debug display
+      const activeAct = actRangesRef.current.find(
+        (act) => currentTime >= act.start && currentTime <= act.end
+      );
+      
+      if (activeAct) {
+        debugState.activeScene = activeAct.sceneId;
+        debugState.sceneStartTime = activeAct.start;
+        debugState.sceneEndTime = activeAct.end;
+        const sceneDuration = activeAct.end - activeAct.start;
+        debugState.sceneProgress = sceneDuration > 0 
+          ? (currentTime - activeAct.start) / sceneDuration 
+          : 0;
+        
+        // Get scene position from DOM
+        const sceneEl = overlayRef.current?.querySelector(`.${activeAct.sceneId}`);
+        if (sceneEl instanceof HTMLElement) {
+          const x = parseFloat(sceneEl.style.getPropertyValue("--scene-x") || "0");
+          const y = parseFloat(sceneEl.style.getPropertyValue("--scene-y") || "0");
+          debugState.sceneX = x;
+          debugState.sceneY = y;
+        }
+      } else {
+        debugState.activeScene = null;
+        debugState.sceneStartTime = 0;
+        debugState.sceneEndTime = 0;
+        debugState.sceneProgress = 0;
+      }
+      
       syncAudio(nextProgress);
     };
 
@@ -254,11 +311,15 @@ export function useChapter1Timeline(options: Chapter1TimelineOptions) {
             0.1,
             act.duration - (act.lineStart ?? 0) - tailHold - totalPause
           );
+          // Each line gets equal spacing - one full scroll per line
           const lineSpacing = lines.length > 0 ? available / lines.length : available;
-          const lineDuration = Math.min(1.6, Math.max(0.4, lineSpacing * 0.9));
+          // Animation duration is a fraction of the spacing for smooth reveal
+          const lineDuration = Math.min(2.0, Math.max(0.8, lineSpacing * 0.5));
           let time = lineStart;
 
           lines.forEach((line, lineIndex) => {
+            const isLastLine = lineIndex === lines.length - 1;
+            
             // Smoother, more cinematic fade-in animation
             tl.fromTo(
               line,
@@ -275,12 +336,20 @@ export function useChapter1Timeline(options: Chapter1TimelineOptions) {
                 autoAlpha: 1,
                 filter: "blur(0px)",
                 scale: 1,
-                duration: lineDuration * 1.8,
+                duration: lineDuration,
                 ease: "power2.out",
               },
               time
             );
-            time += lineSpacing * 1.2; // Slower spacing between lines
+            
+            // Full line spacing - each line requires a complete scroll
+            // Last line gets 3x spacing (equivalent to 3 scrolls) before scene fades
+            if (isLastLine) {
+              time += lineSpacing * 3;
+            } else {
+              time += lineSpacing;
+            }
+            
             const pauseDuration = pauseMap.get(lineIndex);
             if (pauseDuration) {
               time += pauseDuration;
@@ -367,9 +436,32 @@ export function useChapter1Timeline(options: Chapter1TimelineOptions) {
     window.addEventListener("touchstart", handleTouchStart, { passive: true });
     window.addEventListener("touchmove", handleTouchMove, { passive: true });
 
+    // Continuous RAF loop for real-time debug state updates (especially VO)
+    let debugRafId = 0;
+    const updateDebugState = () => {
+      // Update VO playback state in real-time
+      if (activeAudioRef.current) {
+        const audio = activeAudioRef.current;
+        debugState.voPlaying = !audio.paused;
+        debugState.voCurrentTime = audio.currentTime;
+        debugState.voDuration = audio.duration || 0;
+        debugState.audioGroup = activeAudioGroupRef.current;
+      } else {
+        debugState.voPlaying = false;
+        debugState.voCurrentTime = 0;
+        debugState.voDuration = 0;
+      }
+      
+      debugRafId = requestAnimationFrame(updateDebugState);
+    };
+    debugRafId = requestAnimationFrame(updateDebugState);
+
     return () => {
       if (rafId) {
         window.cancelAnimationFrame(rafId);
+      }
+      if (debugRafId) {
+        window.cancelAnimationFrame(debugRafId);
       }
       window.removeEventListener("wheel", handleWheel);
       window.removeEventListener("touchstart", handleTouchStart);

@@ -22,31 +22,32 @@ export const chapter1DirectorTrack: Chapter1DirectorTrack = {
   acts: [
     {
       sceneId: "scene-1",
-      duration: 30,
-      lineStart: 3,
-      tailHold: 2,
-      pauses: [{ afterLine: 9, duration: 3 }],
+      duration: 38, // 0:00-0:30 script + extended last line hold
+      lineStart: 3, // 3 second black screen before text starts
+      tailHold: 30, // Extended hold on last line before scene fades
+      pauses: [{ afterLine: 9, duration: 3 }], // 3-second pause after "he would always come back."
       audioUrl: chapter1VoiceOvers["scene-1"],
       audioGroup: "act-1",
     },
     {
       sceneId: "scene-2a",
-      duration: 38,
+      duration: 65, // 10 lines × ~5s + 2 extra for last line hold
       lineStart: 0.6,
-      tailHold: 1.5,
-      audioUrl: chapter1VoiceOvers["scene-2"],
-      audioGroup: "act-2",
+      tailHold: 17,
+      audioUrl: chapter1VoiceOvers["scene-2a"],
+      audioGroup: "act-2a",
     },
     {
       sceneId: "scene-2b",
-      duration: 37,
+      duration: 65, // 10 lines × ~5s + 2 extra for last line hold
       lineStart: 0.6,
-      tailHold: 2,
-      audioGroup: "act-2",
+      tailHold: 1,
+      audioUrl: chapter1VoiceOvers["scene-2b"],
+      audioGroup: "act-2b",
     },
     {
       sceneId: "scene-3a",
-      duration: 30,
+      duration: 85, // 14 lines × ~5s + 2 extra for last line hold
       lineStart: 0.6,
       tailHold: 1.5,
       audioUrl: chapter1VoiceOvers["scene-3"],
@@ -54,7 +55,7 @@ export const chapter1DirectorTrack: Chapter1DirectorTrack = {
     },
     {
       sceneId: "scene-3b",
-      duration: 30,
+      duration: 88, // 14 lines × ~5s + pause + 2 extra for last line hold
       lineStart: 0.6,
       tailHold: 2,
       pauses: [{ afterLine: 10, duration: 2.5 }],
@@ -62,7 +63,7 @@ export const chapter1DirectorTrack: Chapter1DirectorTrack = {
     },
     {
       sceneId: "scene-4a",
-      duration: 38,
+      duration: 90, // 15 lines × ~5s + 2 extra for last line hold
       lineStart: 0.6,
       tailHold: 1.5,
       audioUrl: chapter1VoiceOvers["scene-4"],
@@ -70,7 +71,7 @@ export const chapter1DirectorTrack: Chapter1DirectorTrack = {
     },
     {
       sceneId: "scene-4b",
-      duration: 37,
+      duration: 80, // 12 lines × ~5s + pause + 2 extra for last line hold
       lineStart: 0.6,
       tailHold: 2,
       pauses: [{ afterLine: 8, duration: 5 }],
@@ -78,7 +79,7 @@ export const chapter1DirectorTrack: Chapter1DirectorTrack = {
     },
     {
       sceneId: "scene-5",
-      duration: 30,
+      duration: 60, // 8 lines × ~5s + pause + 2 extra for last line hold
       lineStart: 0.6,
       tailHold: 2,
       pauses: [{ afterLine: 3, duration: 5 }],
