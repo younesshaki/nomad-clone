@@ -3,10 +3,15 @@ import gsap from "gsap";
 import { NarrativeOverlay } from "../../shared/NarrativeOverlay";
 import { chapter1Scenes } from "./data";
 import "./Chapter1.css";
-import scene5VideoUrl from "./media/YTDowncom_YouTube_Winners-SIN-PARAR_Media_BHXUJHnWveE_001_1080p (online-video-cutter.com).mp4?url";
+// TODO: Replace with new video file in scenes/scene-5/media/
+// import scene5VideoUrl from "./scenes/scene-5/media/YOUR_NEW_VIDEO.mp4?url";
+const scene5VideoUrl = ""; // Placeholder until new video is added
 import { scene1BackgroundImages } from "./scenes/scene-1/content";
 import { scene2aBackgroundImages, scene2aImageCues } from "./scenes/scene-2a/content";
 import { scene2bBackgroundImages, scene2bImageCues } from "./scenes/scene-2b/content";
+import { scene3aBackgroundImages, scene3aImageCues } from "./scenes/scene-3a/content";
+import { scene3bBackgroundImages, scene3bImageCues } from "./scenes/scene-3b/content";
+import { scene4aBackgroundImages, scene4aImageCues, scene4aVideoCue } from "./scenes/scene-4a/content";
 import { audioSyncRegistry } from "./audioSync";
 
 type Chapter1NarrativeProps = {
@@ -46,6 +51,27 @@ export function Chapter1Narrative({ isActive, overlayRef }: Chapter1NarrativePro
   const scene2bImagesRef = useRef<HTMLImageElement[]>([]);
   const scene2bOpacityRef = useRef(0);
   const scene2bRafRef = useRef<number | null>(null);
+
+  // Scene 3a slideshow refs
+  const scene3aPortalRef = useRef<HTMLDivElement | null>(null);
+  const scene3aElementRef = useRef<HTMLElement | null>(null);
+  const scene3aImagesRef = useRef<HTMLImageElement[]>([]);
+  const scene3aOpacityRef = useRef(0);
+  const scene3aRafRef = useRef<number | null>(null);
+
+  // Scene 3b slideshow refs
+  const scene3bPortalRef = useRef<HTMLDivElement | null>(null);
+  const scene3bElementRef = useRef<HTMLElement | null>(null);
+  const scene3bImagesRef = useRef<HTMLImageElement[]>([]);
+  const scene3bOpacityRef = useRef(0);
+  const scene3bRafRef = useRef<number | null>(null);
+
+  // Scene 4a slideshow refs
+  const scene4aPortalRef = useRef<HTMLDivElement | null>(null);
+  const scene4aElementRef = useRef<HTMLElement | null>(null);
+  const scene4aImagesRef = useRef<HTMLImageElement[]>([]);
+  const scene4aOpacityRef = useRef(0);
+  const scene4aRafRef = useRef<number | null>(null);
 
   // Scene 1 image slideshow effect - completely rewritten for cinematic quality
   useEffect(() => {
@@ -706,6 +732,770 @@ export function Chapter1Narrative({ isActive, overlayRef }: Chapter1NarrativePro
       portalRoot.remove();
       scene2bPortalRef.current = null;
       scene2bImagesRef.current = [];
+    };
+  }, [overlayRef]);
+
+  // Scene 3a image slideshow effect - TIME-BASED sync to voiceover
+  useEffect(() => {
+    if (scene3aPortalRef.current) {
+      return;
+    }
+
+    const portalRoot = document.createElement("div");
+    portalRoot.className = "chapter1Scene3aImagePortal";
+    portalRoot.style.cssText = `
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      margin: 0;
+      padding: 0;
+      pointer-events: none;
+      opacity: 0;
+      z-index: 150;
+    `;
+
+    const layer = document.createElement("div");
+    layer.className = "chapter1Scene3aImageLayer";
+    layer.style.cssText = `
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+    `;
+
+    // Create image elements from cues
+    const images = scene3aImageCues.map((cue, index) => {
+      const img = document.createElement("img");
+      img.className = "chapter1Scene3aImage";
+      img.src = cue.image;
+      img.alt = cue.description ?? `Scene 3a background ${index + 1}`;
+      img.draggable = false;
+      img.style.cssText = `
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        will-change: transform, opacity;
+      `;
+      gsap.set(img, {
+        opacity: index === 0 ? 1 : 0,
+        scale: 1.12,
+        x: index % 2 === 0 ? "-2%" : "2%",
+        y: index % 2 === 0 ? "-1.5%" : "1.5%",
+      });
+      return img;
+    });
+
+    images.forEach((img) => layer.appendChild(img));
+    portalRoot.appendChild(layer);
+    document.body.appendChild(portalRoot);
+
+    scene3aPortalRef.current = portalRoot;
+    scene3aImagesRef.current = images;
+
+    let currentImageIndex = 0;
+    let isSceneVisible = false;
+    let kenBurnsTweens: gsap.core.Tween[] = [];
+    let lastAudioTime = -1;
+
+    const CROSSFADE_DURATION = 1.8;
+
+    const startKenBurns = (img: HTMLImageElement, index: number, duration: number) => {
+      gsap.killTweensOf(img, "scale,x,y");
+      const startScale = 1.12;
+      const endScale = 1.0;
+      const startX = index % 2 === 0 ? "-2%" : "2%";
+      const endX = "0%";
+      const startY = index % 2 === 0 ? "-1.5%" : "1.5%";
+      const endY = "0%";
+      gsap.set(img, { scale: startScale, x: startX, y: startY });
+      const tween = gsap.to(img, {
+        scale: endScale,
+        x: endX,
+        y: endY,
+        duration: duration,
+        ease: "none",
+      });
+      kenBurnsTweens.push(tween);
+      return tween;
+    };
+
+    const transitionToImage = (nextIndex: number, duration: number) => {
+      if (nextIndex === currentImageIndex) return;
+      const currentImg = images[currentImageIndex];
+      const nextImg = images[nextIndex];
+      startKenBurns(nextImg, nextIndex, duration);
+      gsap.to(currentImg, {
+        opacity: 0,
+        duration: CROSSFADE_DURATION,
+        ease: "power2.inOut",
+      });
+      gsap.to(nextImg, {
+        opacity: 1,
+        duration: CROSSFADE_DURATION,
+        ease: "power2.inOut",
+      });
+      currentImageIndex = nextIndex;
+    };
+
+    const resetImages = () => {
+      kenBurnsTweens.forEach(t => t.kill());
+      kenBurnsTweens = [];
+      images.forEach((img, index) => {
+        gsap.set(img, {
+          opacity: index === 0 ? 1 : 0,
+          scale: 1.12,
+          x: index % 2 === 0 ? "-2%" : "2%",
+          y: index % 2 === 0 ? "-1.5%" : "1.5%",
+        });
+      });
+      currentImageIndex = 0;
+      lastAudioTime = -1;
+      // Start Ken Burns on first image
+      if (images.length > 0 && scene3aImageCues.length > 0) {
+        const firstCue = scene3aImageCues[0];
+        startKenBurns(images[0], 0, firstCue.endTime - firstCue.startTime);
+      }
+    };
+
+    // Subscribe to audio sync updates
+    const unsubscribe = audioSyncRegistry.subscribe((currentTime, sceneId) => {
+      if (sceneId !== "scene-3a" || !isSceneVisible) return;
+      
+      // Find which image should be showing based on current audio time
+      const targetIndex = scene3aImageCues.findIndex(
+        cue => currentTime >= cue.startTime && currentTime < cue.endTime
+      );
+      
+      if (targetIndex !== -1 && targetIndex !== currentImageIndex) {
+        const cue = scene3aImageCues[targetIndex];
+        transitionToImage(targetIndex, cue.endTime - cue.startTime);
+      }
+      
+      lastAudioTime = currentTime;
+    });
+
+    const tick = () => {
+      if (!scene3aElementRef.current) {
+        const overlayRoot =
+          overlayRef.current ??
+          (document.querySelector(".chapter1Overlay") as HTMLDivElement | null);
+        if (overlayRoot) {
+          scene3aElementRef.current =
+            overlayRoot.querySelector<HTMLElement>(".scene-3a .narrativeSceneInner") ??
+            null;
+        }
+      }
+
+      const element = scene3aElementRef.current;
+      let targetOpacity = 0;
+      if (element) {
+        const rawAutoAlpha = gsap.getProperty(element, "autoAlpha");
+        const autoAlphaValue =
+          typeof rawAutoAlpha === "number"
+            ? rawAutoAlpha
+            : Number.parseFloat(String(rawAutoAlpha));
+        const rawOpacity = gsap.getProperty(element, "opacity");
+        const opacityValue =
+          typeof rawOpacity === "number"
+            ? rawOpacity
+            : Number.parseFloat(String(rawOpacity));
+        const resolvedOpacity = Number.isFinite(autoAlphaValue)
+          ? autoAlphaValue
+          : Number.isFinite(opacityValue)
+            ? opacityValue
+            : 0;
+        targetOpacity =
+          element.style.visibility === "hidden"
+            ? 0
+            : Math.min(Math.max(resolvedOpacity, 0), 1);
+      }
+
+      const currentOpacity = scene3aOpacityRef.current;
+      const nextOpacity = currentOpacity + (targetOpacity - currentOpacity) * 0.08;
+      scene3aOpacityRef.current = nextOpacity;
+      portalRoot.style.opacity = String(nextOpacity);
+      portalRoot.style.visibility = nextOpacity > 0.01 ? "visible" : "hidden";
+
+      const nowVisible = nextOpacity > 0.1;
+      if (nowVisible && !isSceneVisible) {
+        isSceneVisible = true;
+        resetImages();
+      } else if (!nowVisible && isSceneVisible) {
+        isSceneVisible = false;
+      }
+
+      scene3aRafRef.current = requestAnimationFrame(tick);
+    };
+
+    scene3aRafRef.current = requestAnimationFrame(tick);
+
+    return () => {
+      unsubscribe();
+      if (scene3aRafRef.current) {
+        cancelAnimationFrame(scene3aRafRef.current);
+      }
+      kenBurnsTweens.forEach(t => t.kill());
+      portalRoot.remove();
+      scene3aPortalRef.current = null;
+      scene3aImagesRef.current = [];
+    };
+  }, [overlayRef]);
+
+  // Scene 3b image slideshow effect with Ken Burns and crossfades
+  useEffect(() => {
+    if (scene3bPortalRef.current) {
+      return;
+    }
+
+    const portalRoot = document.createElement("div");
+    portalRoot.className = "chapter1Scene3bImagePortal";
+    portalRoot.style.cssText = `
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      margin: 0;
+      padding: 0;
+      pointer-events: none;
+      z-index: 0;
+      opacity: 0;
+      visibility: hidden;
+    `;
+
+    const layer = document.createElement("div");
+    layer.className = "chapter1Scene3bImageLayer";
+    layer.style.cssText = `
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+    `;
+
+    const images = scene3bBackgroundImages.map((src, index) => {
+      const img = document.createElement("img");
+      img.src = src;
+      img.alt = `Scene 3b background ${index + 1}`;
+      img.style.cssText = `
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        min-width: 100%;
+        min-height: 100%;
+        width: auto;
+        height: auto;
+        transform: translate(-50%, -50%) scale(1.12);
+        object-fit: cover;
+        opacity: ${index === 0 ? 1 : 0};
+        will-change: transform, opacity;
+      `;
+      img.draggable = false;
+      img.setAttribute("fetchpriority", index === 0 ? "high" : "low");
+      img.addEventListener("load", () => {
+        console.log(`[Scene3b] Image ${index + 1} loaded`);
+      });
+      return img;
+    });
+
+    images.forEach((img) => layer.appendChild(img));
+    portalRoot.appendChild(layer);
+    document.body.appendChild(portalRoot);
+
+    scene3bPortalRef.current = portalRoot;
+    scene3bImagesRef.current = images;
+
+    let currentImageIndex = 0;
+    let isSceneVisible = false;
+    let kenBurnsTweens: gsap.core.Tween[] = [];
+    let lastAudioTime = -1;
+
+    const CROSSFADE_DURATION = 1.8;
+
+    const startKenBurns = (img: HTMLImageElement, index: number, duration: number) => {
+      gsap.killTweensOf(img, "scale,x,y");
+      const startScale = 1.12;
+      const endScale = 1.0;
+      const startX = index % 2 === 0 ? "-2%" : "2%";
+      const endX = "0%";
+      const startY = index % 2 === 0 ? "-1.5%" : "1.5%";
+      const endY = "0%";
+      gsap.set(img, { scale: startScale, x: startX, y: startY });
+      const tween = gsap.to(img, {
+        scale: endScale,
+        x: endX,
+        y: endY,
+        duration: duration,
+        ease: "none",
+      });
+      kenBurnsTweens.push(tween);
+      return tween;
+    };
+
+    const transitionToImage = (nextIndex: number, duration: number) => {
+      if (nextIndex === currentImageIndex) return;
+      const currentImg = images[currentImageIndex];
+      const nextImg = images[nextIndex];
+      startKenBurns(nextImg, nextIndex, duration);
+      gsap.to(currentImg, {
+        opacity: 0,
+        duration: CROSSFADE_DURATION,
+        ease: "power2.inOut",
+      });
+      gsap.to(nextImg, {
+        opacity: 1,
+        duration: CROSSFADE_DURATION,
+        ease: "power2.inOut",
+      });
+      currentImageIndex = nextIndex;
+    };
+
+    const resetImages = () => {
+      kenBurnsTweens.forEach(t => t.kill());
+      kenBurnsTweens = [];
+      images.forEach((img, index) => {
+        gsap.set(img, {
+          opacity: index === 0 ? 1 : 0,
+          scale: 1.12,
+          x: index % 2 === 0 ? "-2%" : "2%",
+          y: index % 2 === 0 ? "-1.5%" : "1.5%",
+        });
+      });
+      currentImageIndex = 0;
+      lastAudioTime = -1;
+      // Start Ken Burns on first image
+      if (images.length > 0 && scene3bImageCues.length > 0) {
+        const firstCue = scene3bImageCues[0];
+        startKenBurns(images[0], 0, firstCue.endTime - firstCue.startTime);
+      }
+    };
+
+    // Subscribe to audio sync updates
+    const unsubscribe = audioSyncRegistry.subscribe((currentTime, sceneId) => {
+      if (sceneId !== "scene-3b" || !isSceneVisible) return;
+      
+      // Find which image should be showing based on current audio time
+      const targetIndex = scene3bImageCues.findIndex(
+        cue => currentTime >= cue.startTime && currentTime < cue.endTime
+      );
+      
+      if (targetIndex !== -1 && targetIndex !== currentImageIndex) {
+        const cue = scene3bImageCues[targetIndex];
+        transitionToImage(targetIndex, cue.endTime - cue.startTime);
+      }
+      
+      lastAudioTime = currentTime;
+    });
+
+    const tick = () => {
+      if (!scene3bElementRef.current) {
+        const overlayRoot =
+          overlayRef.current ??
+          (document.querySelector(".chapter1Overlay") as HTMLDivElement | null);
+        if (overlayRoot) {
+          scene3bElementRef.current =
+            overlayRoot.querySelector<HTMLElement>(".scene-3b .narrativeSceneInner") ??
+            null;
+        }
+      }
+
+      const element = scene3bElementRef.current;
+      let targetOpacity = 0;
+      if (element) {
+        const rawAutoAlpha = gsap.getProperty(element, "autoAlpha");
+        const autoAlphaValue =
+          typeof rawAutoAlpha === "number"
+            ? rawAutoAlpha
+            : Number.parseFloat(String(rawAutoAlpha));
+        const rawOpacity = gsap.getProperty(element, "opacity");
+        const opacityValue =
+          typeof rawOpacity === "number"
+            ? rawOpacity
+            : Number.parseFloat(String(rawOpacity));
+        const resolvedOpacity = Number.isFinite(autoAlphaValue)
+          ? autoAlphaValue
+          : Number.isFinite(opacityValue)
+            ? opacityValue
+            : 0;
+        targetOpacity =
+          element.style.visibility === "hidden"
+            ? 0
+            : Math.min(Math.max(resolvedOpacity, 0), 1);
+      }
+
+      const currentOpacity = scene3bOpacityRef.current;
+      const nextOpacity = currentOpacity + (targetOpacity - currentOpacity) * 0.08;
+      scene3bOpacityRef.current = nextOpacity;
+      portalRoot.style.opacity = String(nextOpacity);
+      portalRoot.style.visibility = nextOpacity > 0.01 ? "visible" : "hidden";
+
+      const nowVisible = nextOpacity > 0.1;
+      if (nowVisible && !isSceneVisible) {
+        isSceneVisible = true;
+        resetImages();
+      } else if (!nowVisible && isSceneVisible) {
+        isSceneVisible = false;
+      }
+
+      scene3bRafRef.current = requestAnimationFrame(tick);
+    };
+
+    scene3bRafRef.current = requestAnimationFrame(tick);
+
+    return () => {
+      unsubscribe();
+      if (scene3bRafRef.current) {
+        cancelAnimationFrame(scene3bRafRef.current);
+      }
+      kenBurnsTweens.forEach(t => t.kill());
+      portalRoot.remove();
+      scene3bPortalRef.current = null;
+      scene3bImagesRef.current = [];
+    };
+  }, [overlayRef]);
+
+  // Scene 4a image slideshow effect with Ken Burns and crossfades
+  useEffect(() => {
+    if (scene4aPortalRef.current) {
+      return;
+    }
+
+    const portalRoot = document.createElement("div");
+    portalRoot.className = "chapter1Scene4aImagePortal";
+    portalRoot.style.cssText = `
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      margin: 0;
+      padding: 0;
+      pointer-events: none;
+      z-index: 0;
+      opacity: 0;
+      visibility: hidden;
+    `;
+
+    const layer = document.createElement("div");
+    layer.className = "chapter1Scene4aImageLayer";
+    layer.style.cssText = `
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+    `;
+
+    const images = scene4aBackgroundImages.map((src, index) => {
+      const img = document.createElement("img");
+      img.src = src;
+      img.alt = `Scene 4a background ${index + 1}`;
+      img.style.cssText = `
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        min-width: 100%;
+        min-height: 100%;
+        width: auto;
+        height: auto;
+        transform: translate(-50%, -50%) scale(1.12);
+        object-fit: cover;
+        opacity: ${index === 0 ? 1 : 0};
+        will-change: transform, opacity;
+      `;
+      img.draggable = false;
+      img.setAttribute("fetchpriority", index === 0 ? "high" : "low");
+      img.addEventListener("load", () => {
+        console.log(`[Scene4a] Image ${index + 1} loaded`);
+      });
+      return img;
+    });
+
+    // Create video element for final segment
+    const video = document.createElement("video");
+    video.src = scene4aVideoCue.video;
+    video.muted = true;
+    video.loop = false;
+    video.playsInline = true;
+    video.preload = "auto";
+    video.autoplay = false; // We'll play manually when ready
+    video.style.cssText = `
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      min-width: 100%;
+      min-height: 100%;
+      width: auto;
+      height: auto;
+      transform: translate(-50%, -50%) scale(1.05);
+      object-fit: cover;
+      opacity: 0;
+      will-change: transform, opacity;
+    `;
+    
+    // Track video ready state
+    let videoReady = false;
+    video.addEventListener("loadeddata", () => {
+      console.log("[Scene4a] Video loaded and ready, readyState:", video.readyState);
+      videoReady = true;
+    });
+    video.addEventListener("error", (e) => {
+      console.error("[Scene4a] Video error:", e, video.error);
+    });
+    // Force video to start loading
+    video.load();
+
+    images.forEach((img) => layer.appendChild(img));
+    layer.appendChild(video);
+    portalRoot.appendChild(layer);
+    document.body.appendChild(portalRoot);
+
+    scene4aPortalRef.current = portalRoot;
+    scene4aImagesRef.current = images;
+    
+    console.log("[Scene4a] Slideshow initialized, video src:", video.src);
+
+    let currentImageIndex = 0;
+    let isVideoActive = false;
+    let isSceneVisible = false;
+    let kenBurnsTweens: gsap.core.Tween[] = [];
+    let lastAudioTime = -1;
+
+    const CROSSFADE_DURATION = 1.8;
+
+    const startKenBurns = (img: HTMLImageElement, index: number, duration: number) => {
+      gsap.killTweensOf(img, "scale,x,y");
+      const startScale = 1.12;
+      const endScale = 1.0;
+      const startX = index % 2 === 0 ? "-2%" : "2%";
+      const endX = "0%";
+      const startY = index % 2 === 0 ? "-1.5%" : "1.5%";
+      const endY = "0%";
+      gsap.set(img, { scale: startScale, x: startX, y: startY });
+      const tween = gsap.to(img, {
+        scale: endScale,
+        x: endX,
+        y: endY,
+        duration: duration,
+        ease: "none",
+      });
+      kenBurnsTweens.push(tween);
+      return tween;
+    };
+
+    const transitionToImage = (nextIndex: number, duration: number) => {
+      if (nextIndex === currentImageIndex && !isVideoActive) return;
+      
+      // If video is active, fade it out
+      if (isVideoActive) {
+        gsap.to(video, {
+          opacity: 0,
+          duration: CROSSFADE_DURATION,
+          ease: "power2.inOut",
+          onComplete: () => {
+            video.pause();
+          }
+        });
+        isVideoActive = false;
+      }
+      
+      const currentImg = images[currentImageIndex];
+      const nextImg = images[nextIndex];
+      startKenBurns(nextImg, nextIndex, duration);
+      gsap.to(currentImg, {
+        opacity: 0,
+        duration: CROSSFADE_DURATION,
+        ease: "power2.inOut",
+      });
+      gsap.to(nextImg, {
+        opacity: 1,
+        duration: CROSSFADE_DURATION,
+        ease: "power2.inOut",
+      });
+      currentImageIndex = nextIndex;
+    };
+
+    const transitionToVideo = () => {
+      if (isVideoActive) return;
+      
+      console.log("[Scene4a] Transitioning to video");
+      console.log("[Scene4a] Video src:", video.src);
+      console.log("[Scene4a] Video readyState:", video.readyState, "videoReady:", videoReady);
+      isVideoActive = true;
+      
+      // Fade out current image
+      const currentImg = images[currentImageIndex];
+      gsap.to(currentImg, {
+        opacity: 0,
+        duration: CROSSFADE_DURATION,
+        ease: "power2.inOut",
+      });
+      
+      // Function to actually play video
+      const playVideo = () => {
+        video.currentTime = 0;
+        const playPromise = video.play();
+        if (playPromise !== undefined) {
+          playPromise.then(() => {
+            console.log("[Scene4a] Video playing successfully");
+          }).catch((err) => {
+            console.error("[Scene4a] Video play failed:", err);
+          });
+        }
+        gsap.fromTo(video, 
+          { scale: 1.08, opacity: 0 },
+          { 
+            scale: 1.0,
+            opacity: 1, 
+            duration: CROSSFADE_DURATION, 
+            ease: "power2.inOut" 
+          }
+        );
+      };
+      
+      // Check if video is ready, if not wait for it
+      if (video.readyState >= 3) { // HAVE_FUTURE_DATA or HAVE_ENOUGH_DATA
+        playVideo();
+      } else {
+        console.log("[Scene4a] Video not ready, waiting for canplay event");
+        video.addEventListener("canplay", () => {
+          console.log("[Scene4a] Video canplay fired, now playing");
+          playVideo();
+        }, { once: true });
+      }
+    };
+
+    const resetImages = () => {
+      kenBurnsTweens.forEach(t => t.kill());
+      kenBurnsTweens = [];
+      images.forEach((img, index) => {
+        gsap.set(img, {
+          opacity: index === 0 ? 1 : 0,
+          scale: 1.12,
+          x: index % 2 === 0 ? "-2%" : "2%",
+          y: index % 2 === 0 ? "-1.5%" : "1.5%",
+        });
+      });
+      // Reset video
+      gsap.set(video, { opacity: 0, scale: 1.08 });
+      video.pause();
+      video.currentTime = 0;
+      isVideoActive = false;
+      
+      currentImageIndex = 0;
+      lastAudioTime = -1;
+      // Start Ken Burns on first image
+      if (images.length > 0 && scene4aImageCues.length > 0) {
+        const firstCue = scene4aImageCues[0];
+        startKenBurns(images[0], 0, firstCue.endTime - firstCue.startTime);
+      }
+    };
+
+    // Subscribe to audio sync updates
+    const unsubscribe = audioSyncRegistry.subscribe((currentTime, sceneId) => {
+      if (sceneId !== "scene-4a") return;
+      if (!isSceneVisible) {
+        // Log occasionally to avoid spam
+        if (Math.floor(currentTime) !== Math.floor(lastAudioTime)) {
+          console.log("[Scene4a] Audio update received but scene not visible yet, time:", currentTime.toFixed(2));
+        }
+        return;
+      }
+      
+      console.log("[Scene4a] Audio sync update, time:", currentTime.toFixed(2), "sceneId:", sceneId);
+      
+      // Check if we should show video (after all images)
+      if (currentTime >= scene4aVideoCue.startTime && currentTime < scene4aVideoCue.endTime) {
+        transitionToVideo();
+        lastAudioTime = currentTime;
+        return;
+      }
+      
+      // Find which image should be showing based on current audio time
+      const targetIndex = scene4aImageCues.findIndex(
+        cue => currentTime >= cue.startTime && currentTime < cue.endTime
+      );
+      
+      if (targetIndex !== -1 && (targetIndex !== currentImageIndex || isVideoActive)) {
+        const cue = scene4aImageCues[targetIndex];
+        transitionToImage(targetIndex, cue.endTime - cue.startTime);
+      }
+      
+      lastAudioTime = currentTime;
+    });
+
+    const tick = () => {
+      if (!scene4aElementRef.current) {
+        const overlayRoot =
+          overlayRef.current ??
+          (document.querySelector(".chapter1Overlay") as HTMLDivElement | null);
+        if (overlayRoot) {
+          scene4aElementRef.current =
+            overlayRoot.querySelector<HTMLElement>(".scene-4a .narrativeSceneInner") ??
+            null;
+        }
+      }
+
+      const element = scene4aElementRef.current;
+      let targetOpacity = 0;
+      if (element) {
+        const rawAutoAlpha = gsap.getProperty(element, "autoAlpha");
+        const autoAlphaValue =
+          typeof rawAutoAlpha === "number"
+            ? rawAutoAlpha
+            : Number.parseFloat(String(rawAutoAlpha));
+        const rawOpacity = gsap.getProperty(element, "opacity");
+        const opacityValue =
+          typeof rawOpacity === "number"
+            ? rawOpacity
+            : Number.parseFloat(String(rawOpacity));
+        const resolvedOpacity = Number.isFinite(autoAlphaValue)
+          ? autoAlphaValue
+          : Number.isFinite(opacityValue)
+            ? opacityValue
+            : 0;
+        targetOpacity =
+          element.style.visibility === "hidden"
+            ? 0
+            : Math.min(Math.max(resolvedOpacity, 0), 1);
+      }
+
+      const currentOpacity = scene4aOpacityRef.current;
+      const nextOpacity = currentOpacity + (targetOpacity - currentOpacity) * 0.08;
+      scene4aOpacityRef.current = nextOpacity;
+      portalRoot.style.opacity = String(nextOpacity);
+      portalRoot.style.visibility = nextOpacity > 0.01 ? "visible" : "hidden";
+
+      const nowVisible = nextOpacity > 0.1;
+      if (nowVisible && !isSceneVisible) {
+        console.log("[Scene4a] Scene became visible, opacity:", nextOpacity.toFixed(2));
+        isSceneVisible = true;
+        resetImages();
+      } else if (!nowVisible && isSceneVisible) {
+        console.log("[Scene4a] Scene became hidden");
+        isSceneVisible = false;
+      }
+
+      scene4aRafRef.current = requestAnimationFrame(tick);
+    };
+
+    scene4aRafRef.current = requestAnimationFrame(tick);
+
+    return () => {
+      unsubscribe();
+      if (scene4aRafRef.current) {
+        cancelAnimationFrame(scene4aRafRef.current);
+      }
+      kenBurnsTweens.forEach(t => t.kill());
+      video.pause();
+      video.src = "";
+      portalRoot.remove();
+      scene4aPortalRef.current = null;
+      scene4aImagesRef.current = [];
     };
   }, [overlayRef]);
 

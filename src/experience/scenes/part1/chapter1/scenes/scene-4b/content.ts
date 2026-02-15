@@ -1,8 +1,10 @@
 import type { NarrativeScene } from "../../../shared/narrativeTypes";
+import { chapter1VoiceOvers } from "../../audio";
 
 export const scene4b: NarrativeScene = {
   id: "scene-4b",
   title: "The Ritual",
+  voiceOver: chapter1VoiceOvers["scene-4b"],
   mode: "2d",
   lines: [
     { text: "the way only children know," },

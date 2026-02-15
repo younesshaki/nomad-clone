@@ -18,29 +18,30 @@ export type ImageCue = {
 };
 
 // Adjust these timestamps after listening to the VO
+// Scene 2b VO is approximately 18-20 seconds
 export const scene2bImageCues: ImageCue[] = [
   {
     image: bg1,
     startTime: 0,
-    endTime: 5,
+    endTime: 4,
     description: "And children, more than adults, understand power..."
   },
   {
     image: bg2,
-    startTime: 5,
-    endTime: 10,
+    startTime: 4,
+    endTime: 8,
     description: "...when they see it."
   },
   {
     image: bg3,
-    startTime: 10,
-    endTime: 15,
+    startTime: 8,
+    endTime: 13,
     description: "The rule changed. Not with fanfare."
   },
   {
     image: bg4,
-    startTime: 15,
-    endTime: 25,
+    startTime: 13,
+    endTime: 22,
     description: "Just... changed. The way the world changes..."
   },
 ];
@@ -48,6 +49,7 @@ export const scene2bImageCues: ImageCue[] = [
 export const scene2b: NarrativeScene = {
   id: "scene-2b",
   title: "The Rebellion",
+  voiceOver: chapter1VoiceOvers["scene-2b"],
   mode: "2d",
   lines: [
     { text: "And children," },

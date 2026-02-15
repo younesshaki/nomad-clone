@@ -10,6 +10,12 @@
   flex-wrap: nowrap;
   justify-content: center;
   white-space: nowrap;
+  transition: opacity 0.3s ease;
+}
+
+.chapterNav--hidden {
+  opacity: 0;
+  pointer-events: none;
 }
 
 .chapterNavLabel {

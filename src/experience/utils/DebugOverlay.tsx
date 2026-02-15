@@ -15,6 +15,11 @@ export const debugState = {
   sceneEndTime: 0,
   sceneProgress: 0,
   
+  // Auto-play state
+  isAutoPlaying: false,
+  waitingForScroll: false,
+  canScrollBack: false, // Whether user can scroll back to previous scene
+  
   // Chapter info
   currentPart: 1,
   currentChapter: 1,

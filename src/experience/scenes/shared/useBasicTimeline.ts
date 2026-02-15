@@ -20,6 +20,12 @@ type BasicTimelineOptions = {
    */
   useScrollTrigger?: boolean;
   /**
+   * If true, the timeline auto-advances within each scene, but pauses at scene
+   * boundaries waiting for user scroll to continue to the next scene.
+   * Default: true
+   */
+  autoPlayWithGates?: boolean;
+  /**
    * Callback fired on progress updates (for external synchronization)
    */
   onProgressUpdate?: (progress: number, activeSceneId: string | null) => void;
@@ -52,6 +58,7 @@ export function useBasicTimeline({
   introDuration,
   introRevealLead,
   useScrollTrigger = true,
+  autoPlayWithGates = true,
   onProgressUpdate,
 }: BasicTimelineOptions): BasicTimelineReturn {
   const scrollProgressRef = useRef(0);
@@ -380,36 +387,40 @@ export function useBasicTimeline({
                 scrollEnabledRef.current = true;
                 reportProgress(MIN_SCROLL_PROGRESS, null);
                 
-                // After intro, set up ScrollTrigger to scrub through the rest
-                ScrollTrigger.create({
-                  trigger: spacer,
-                  start: "top top",
-                  end: "bottom bottom",
-                  scrub: 1.5, // Smooth scrubbing with 1.5s delay for buttery feel
-                  onUpdate: (self) => {
-                    if (!scrollEnabledRef.current) return;
-                    
-                    // Map scroll progress (0-1) to timeline progress (MIN to MAX)
-                    const mappedProgress = gsap.utils.mapRange(
-                      0, 1,
-                      MIN_SCROLL_PROGRESS, MAX_SCROLL_PROGRESS,
-                      self.progress
-                    );
-                    
-                    // Find active scene based on mapped progress
-                    const currentTime = mappedProgress * totalTimelineDuration;
-                    const activeScene = currentScenes.find(
-                      (scene) => currentTime >= scene.startTime && currentTime < scene.endTime
-                    );
-                    
-                    reportProgress(mappedProgress, activeScene?.id ?? null);
-                    tl.progress(mappedProgress);
-                  },
-                  markers: false, // Set to true for debugging
-                });
-                
-                // Refresh ScrollTrigger after setup
-                ScrollTrigger.refresh();
+                // Only set up ScrollTrigger if NOT using autoPlayWithGates
+                // When autoPlayWithGates is enabled, the hybrid loop controls the timeline
+                if (!autoPlayWithGates) {
+                  // After intro, set up ScrollTrigger to scrub through the rest
+                  ScrollTrigger.create({
+                    trigger: spacer,
+                    start: "top top",
+                    end: "bottom bottom",
+                    scrub: 1.5, // Smooth scrubbing with 1.5s delay for buttery feel
+                    onUpdate: (self) => {
+                      if (!scrollEnabledRef.current) return;
+                      
+                      // Map scroll progress (0-1) to timeline progress (MIN to MAX)
+                      const mappedProgress = gsap.utils.mapRange(
+                        0, 1,
+                        MIN_SCROLL_PROGRESS, MAX_SCROLL_PROGRESS,
+                        self.progress
+                      );
+                      
+                      // Find active scene based on mapped progress
+                      const currentTime = mappedProgress * totalTimelineDuration;
+                      const activeScene = currentScenes.find(
+                        (scene) => currentTime >= scene.startTime && currentTime < scene.endTime
+                      );
+                      
+                      reportProgress(mappedProgress, activeScene?.id ?? null);
+                      tl.progress(mappedProgress);
+                    },
+                    markers: false, // Set to true for debugging
+                  });
+                  
+                  // Refresh ScrollTrigger after setup
+                  ScrollTrigger.refresh();
+                }
               },
             }
           );
@@ -478,21 +489,105 @@ export function useBasicTimeline({
       updateFromDelta(delta);
     };
 
-    // Hybrid Engine Heartbeat - implemented as a RAF loop
-    // This handles cinematic auto-advance for scenes with behavior="cinematic"
+    // Hybrid Engine Heartbeat - Auto-play with Scene Gates
+    // Auto-advances within each scene, pauses at scene boundaries for user scroll
     let hybridLastTime = performance.now();
     let hybridFrameId = 0;
-    let cinematicAutoAdvancing = false;
-    let cinematicStartProgress = 0;
-    let cinematicTargetProgress = 0;
-    let cinematicElapsed = 0;
-    let cinematicDuration = 0;
+    
+    // Auto-play state
+    let isAutoPlaying = false;
+    let autoPlayStartProgress = 0;
+    let autoPlayTargetProgress = 0;
+    let autoPlayElapsed = 0;
+    let autoPlayDuration = 0;
+    let currentSceneIndex = -1;
+    let waitingForUserScroll = false;
+    let userScrollAccumulator = 0;
+    const SCROLL_THRESHOLD = 0.02; // Amount of scroll needed to trigger next scene
+
+    // Track user scroll input for gate release
+    const handleGateScroll = (event: WheelEvent) => {
+      if (!waitingForUserScroll) return;
+      
+      // Only allow forward scrolling to unlock gates
+      if (event.deltaY > 0) {
+        userScrollAccumulator += event.deltaY / 2500;
+        
+        if (userScrollAccumulator >= SCROLL_THRESHOLD) {
+          // User has scrolled enough - unlock the gate
+          waitingForUserScroll = false;
+          debugState.waitingForScroll = false;
+          userScrollAccumulator = 0;
+          
+          // Start auto-playing the next scene
+          const nextSceneIndex = currentSceneIndex + 1;
+          if (nextSceneIndex < currentScenes.length) {
+            const nextScene = currentScenes[nextSceneIndex];
+            currentSceneIndex = nextSceneIndex;
+            
+            isAutoPlaying = true;
+            debugState.isAutoPlaying = true;
+            autoPlayStartProgress = nextScene.startTime / totalTimelineDuration;
+            autoPlayTargetProgress = nextScene.endTime / totalTimelineDuration;
+            autoPlayDuration = nextScene.duration;
+            autoPlayElapsed = 0;
+            
+            console.log(`[AutoPlay] User unlocked gate, starting scene: ${nextScene.id}`);
+          }
+        }
+      }
+      
+      event.preventDefault();
+    };
+
+    const handleGateTouchStart = (event: TouchEvent) => {
+      if (!waitingForUserScroll) return;
+      touchStartY = event.touches[0]?.clientY ?? 0;
+    };
+
+    const handleGateTouchMove = (event: TouchEvent) => {
+      if (!waitingForUserScroll) return;
+      
+      const currentY = event.touches[0]?.clientY ?? 0;
+      const delta = (touchStartY - currentY) / 800;
+      touchStartY = currentY;
+      
+      if (delta > 0) {
+        userScrollAccumulator += delta;
+        
+        if (userScrollAccumulator >= SCROLL_THRESHOLD) {
+          waitingForUserScroll = false;
+          debugState.waitingForScroll = false;
+          userScrollAccumulator = 0;
+          
+          const nextSceneIndex = currentSceneIndex + 1;
+          if (nextSceneIndex < currentScenes.length) {
+            const nextScene = currentScenes[nextSceneIndex];
+            currentSceneIndex = nextSceneIndex;
+            
+            isAutoPlaying = true;
+            debugState.isAutoPlaying = true;
+            autoPlayStartProgress = nextScene.startTime / totalTimelineDuration;
+            autoPlayTargetProgress = nextScene.endTime / totalTimelineDuration;
+            autoPlayDuration = nextScene.duration;
+            autoPlayElapsed = 0;
+          }
+        }
+      }
+    };
+
+    // Add gate scroll listeners if auto-play mode is enabled
+    if (autoPlayWithGates) {
+      window.addEventListener("wheel", handleGateScroll, { passive: false });
+      window.addEventListener("touchstart", handleGateTouchStart, { passive: true });
+      window.addEventListener("touchmove", handleGateTouchMove, { passive: true });
+    }
 
     const hybridLoop = (time: number) => {
       const dt = (time - hybridLastTime) / 1000;
       hybridLastTime = time;
 
-      if (timeline && scrollEnabledRef.current && totalTimelineDuration > 0) {
+      if (timeline && scrollEnabledRef.current && totalTimelineDuration > 0 && autoPlayWithGates) {
         // Calculate current time from progress
         const currentTime = scrollProgressRef.current * totalTimelineDuration;
         
@@ -500,46 +595,98 @@ export function useBasicTimeline({
         const activeScene = currentScenes.find(
           (scene) => currentTime >= scene.startTime && currentTime < scene.endTime
         );
-
-        // Check if we're in a cinematic scene
-        if (activeScene?.behavior === "cinematic") {
-          if (!cinematicAutoAdvancing) {
-            // Start cinematic auto-advance
-            cinematicAutoAdvancing = true;
-            cinematicStartProgress = scrollProgressRef.current;
-            cinematicTargetProgress = activeScene.endTime / totalTimelineDuration;
-            cinematicDuration = activeScene.duration;
-            cinematicElapsed = 0;
-            
-            console.log(`[Hybrid] Entering cinematic scene: ${activeScene.id}, duration: ${cinematicDuration}s`);
-          }
+        
+        // Initialize auto-play on first scene if not started
+        if (!isAutoPlaying && !waitingForUserScroll && currentSceneIndex === -1 && currentScenes.length > 0) {
+          const firstScene = currentScenes[0];
+          currentSceneIndex = 0;
+          isAutoPlaying = true;
+          debugState.isAutoPlaying = true;
+          autoPlayStartProgress = minScrollProgress;
+          autoPlayTargetProgress = firstScene.endTime / totalTimelineDuration;
+          autoPlayDuration = firstScene.duration;
+          autoPlayElapsed = 0;
           
-          // Auto-advance the timeline
-          cinematicElapsed += dt;
-          const t = Math.min(1, cinematicElapsed / cinematicDuration);
-          const easedT = gsap.utils.clamp(0, 1, t); // Linear for now, could add easing
+          console.log(`[AutoPlay] Starting first scene: ${firstScene.id}, duration: ${autoPlayDuration}s, from ${autoPlayStartProgress.toFixed(3)} to ${autoPlayTargetProgress.toFixed(3)}`);
+        }
+
+        // Auto-advance if currently auto-playing
+        if (isAutoPlaying) {
+          autoPlayElapsed += dt;
+          const t = Math.min(1, autoPlayElapsed / autoPlayDuration);
+          
+          // Use easeInOut for smooth auto-scroll feel
+          const easedT = t < 0.5 
+            ? 2 * t * t 
+            : 1 - Math.pow(-2 * t + 2, 2) / 2;
           
           const newProgress = gsap.utils.interpolate(
-            cinematicStartProgress,
-            cinematicTargetProgress,
+            autoPlayStartProgress,
+            autoPlayTargetProgress,
             easedT
           );
           
-          // Report progress with active scene
+          // Update progress
+          scrollProgressRef.current = newProgress;
+          reportProgress(newProgress, currentScenes[currentSceneIndex]?.id ?? null);
+          timeline.progress(newProgress);
+          
+          // Check if scene complete
+          if (t >= 1) {
+            isAutoPlaying = false;
+            debugState.isAutoPlaying = false;
+            
+            // Check if there are more scenes
+            if (currentSceneIndex < currentScenes.length - 1) {
+              // Wait for user scroll to continue
+              waitingForUserScroll = true;
+              debugState.waitingForScroll = true;
+              userScrollAccumulator = 0;
+              console.log(`[AutoPlay] Scene ${currentScenes[currentSceneIndex]?.id} complete. Waiting for user scroll...`);
+            } else {
+              console.log(`[AutoPlay] All scenes complete!`);
+            }
+          }
+        }
+        
+        // Update debug state
+        debugState.isAutoPlaying = isAutoPlaying;
+        debugState.waitingForScroll = waitingForUserScroll;
+      } else if (timeline && scrollEnabledRef.current && totalTimelineDuration > 0 && !autoPlayWithGates) {
+        // Legacy cinematic-only auto-advance (original behavior)
+        const currentTime = scrollProgressRef.current * totalTimelineDuration;
+        const activeScene = currentScenes.find(
+          (scene) => currentTime >= scene.startTime && currentTime < scene.endTime
+        );
+
+        if (activeScene?.behavior === "cinematic") {
+          if (!isAutoPlaying) {
+            isAutoPlaying = true;
+            autoPlayStartProgress = scrollProgressRef.current;
+            autoPlayTargetProgress = activeScene.endTime / totalTimelineDuration;
+            autoPlayDuration = activeScene.duration;
+            autoPlayElapsed = 0;
+          }
+          
+          autoPlayElapsed += dt;
+          const t = Math.min(1, autoPlayElapsed / autoPlayDuration);
+          
+          const newProgress = gsap.utils.interpolate(
+            autoPlayStartProgress,
+            autoPlayTargetProgress,
+            t
+          );
+          
           reportProgress(newProgress, activeScene.id);
           timeline.progress(newProgress);
           
-          // Check if cinematic segment complete
           if (t >= 1) {
-            cinematicAutoAdvancing = false;
-            console.log(`[Hybrid] Exited cinematic scene: ${activeScene.id}`);
+            isAutoPlaying = false;
           }
         } else {
-          // Not in cinematic - reset state
-          if (cinematicAutoAdvancing) {
-            cinematicAutoAdvancing = false;
+          if (isAutoPlaying) {
+            isAutoPlaying = false;
           }
-          // Report current active scene for non-cinematic
           if (activeScene) {
             reportProgress(scrollProgressRef.current, activeScene.id);
           }
@@ -551,8 +698,8 @@ export function useBasicTimeline({
     
     hybridFrameId = requestAnimationFrame(hybridLoop);
 
-    // Only add manual handlers if not using ScrollTrigger
-    if (!useScrollTrigger) {
+    // Only add manual handlers if not using ScrollTrigger and not using autoPlay
+    if (!useScrollTrigger && !autoPlayWithGates) {
       window.addEventListener("wheel", handleWheel, { passive: false });
       window.addEventListener("touchstart", handleTouchStart, { passive: true });
       window.addEventListener("touchmove", handleTouchMove, { passive: true });
@@ -567,10 +714,17 @@ export function useBasicTimeline({
       }
       
       // Cleanup manual handlers
-      if (!useScrollTrigger) {
+      if (!useScrollTrigger && !autoPlayWithGates) {
         window.removeEventListener("wheel", handleWheel);
         window.removeEventListener("touchstart", handleTouchStart);
         window.removeEventListener("touchmove", handleTouchMove);
+      }
+      
+      // Cleanup gate scroll handlers
+      if (autoPlayWithGates) {
+        window.removeEventListener("wheel", handleGateScroll);
+        window.removeEventListener("touchstart", handleGateTouchStart);
+        window.removeEventListener("touchmove", handleGateTouchMove);
       }
       
       // Cleanup ScrollTrigger
@@ -594,7 +748,7 @@ export function useBasicTimeline({
       
       ctx?.revert();
     };
-  }, [isActive, useScrollTrigger, onProgressUpdate]);
+  }, [isActive, useScrollTrigger, autoPlayWithGates, onProgressUpdate]);
 
   // Return current state for external consumers
   return {

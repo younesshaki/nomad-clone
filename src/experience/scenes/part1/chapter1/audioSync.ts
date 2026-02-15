@@ -17,6 +17,7 @@ class AudioSyncRegistry {
    * Register an audio element for a scene
    */
   registerAudio(sceneId: string, audio: HTMLAudioElement): void {
+    console.log(`[AudioSync] Registering audio for scene: ${sceneId}`);
     this.audioElements.set(sceneId, audio);
     this.startPolling();
   }
@@ -57,6 +58,48 @@ class AudioSyncRegistry {
     return audio ? !audio.paused : false;
   }
 
+  /**
+   * Check if ANY audio is currently playing
+   */
+  isAnyPlaying(): boolean {
+    for (const audio of this.audioElements.values()) {
+      if (!audio.paused && audio.volume > 0.01) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
+   * Subscribe to VO playing state changes
+   */
+  subscribeToPlayingState(callback: (isPlaying: boolean) => void): () => void {
+    let wasPlaying = false;
+    
+    const checkState = () => {
+      const isPlaying = this.isAnyPlaying();
+      if (isPlaying !== wasPlaying) {
+        wasPlaying = isPlaying;
+        callback(isPlaying);
+      }
+    };
+    
+    // Check every frame while polling
+    const wrappedCallback: AudioSyncCallback = () => {
+      checkState();
+    };
+    
+    this.listeners.add(wrappedCallback);
+    
+    // Also set up an interval for when no audio is registered yet
+    const intervalId = setInterval(checkState, 100);
+    
+    return () => {
+      this.listeners.delete(wrappedCallback);
+      clearInterval(intervalId);
+    };
+  }
+
   private startPolling(): void {
     if (this.isPolling) return;
     this.isPolling = true;
@@ -71,12 +114,21 @@ class AudioSyncRegistry {
     }
   }
 
+  private lastLogTime: Record<string, number> = {};
+  
   private poll = (): void => {
     if (!this.isPolling) return;
 
     // Notify listeners of current times for all playing audio
     this.audioElements.forEach((audio, sceneId) => {
       if (!audio.paused) {
+        // Log occasionally for debugging
+        const now = Date.now();
+        if (!this.lastLogTime[sceneId] || now - this.lastLogTime[sceneId] > 2000) {
+          console.log(`[AudioSync] Polling ${sceneId}, time: ${audio.currentTime.toFixed(2)}, paused: ${audio.paused}`);
+          this.lastLogTime[sceneId] = now;
+        }
+        
         this.listeners.forEach(callback => {
           callback(audio.currentTime, sceneId);
         });

@@ -150,6 +150,7 @@ export default function ChapterNav({
   activeChapterIndex,
   onSelectionChange,
 }: ChapterNavProps) {
+  const [isHidden, setIsHidden] = useState(false);
   const activePart = parts[activePartIndex];
   const activeChapters = activePart?.chapters ?? [];
   const chapterOffsets = useMemo(() => {
@@ -167,8 +168,22 @@ export default function ChapterNav({
   const canPrevChapter = activeChapterIndex > 0;
   const canNextChapter = activeChapterIndex < activeChapters.length - 1;
 
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key.toLowerCase() !== "h") {
+        return;
+      }
+      setIsHidden((prev) => !prev);
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, []);
+
   return (
-    <div className="chapterNav">
+    <div className={`chapterNav${isHidden ? " chapterNav--hidden" : ""}`}>
       <div className="chapterNavButtonRow">
         <FancyButton
           label="Prev Part"

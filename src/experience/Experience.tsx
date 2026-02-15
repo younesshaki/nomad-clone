@@ -17,6 +17,7 @@ import { preloadSceneAssets, preloadAdjacentChapters } from "./sceneAssets";
 import { useLoadingController } from "./hooks/useLoadingController";
 import { SoundProvider } from "./soundContext";
 import { useSmoothScroll } from "./hooks/useSmoothScroll";
+import { ScrollIndicator } from "./scenes/shared/ScrollIndicator";
 
 type SceneLocation = {
   partIndex: number;
@@ -400,6 +401,8 @@ export default function Experience() {
         )}
         {/* Debug panel rendered outside Canvas to avoid R3F reconciler issues */}
         <DebugPanel enabled={debugEnabled} />
+        {/* ScrollIndicator rendered outside Canvas to avoid R3F reconciler issues */}
+        <ScrollIndicator />
       </div>
     );
   }
