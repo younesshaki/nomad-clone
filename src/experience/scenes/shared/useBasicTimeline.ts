@@ -16,7 +16,7 @@ type BasicTimelineOptions = {
   /** 
    * If true, uses native scroll + ScrollTrigger scrub instead of manual wheel hijacking.
    * This integrates with Lenis smooth scroll for buttery animations.
-   * Default: true (ScrollTrigger mode)
+   * Default: true (ScrollTrigger mode)                          
    */
   useScrollTrigger?: boolean;
   /**
@@ -652,6 +652,20 @@ export function useBasicTimeline({
         // Update debug state
         debugState.isAutoPlaying = isAutoPlaying;
         debugState.waitingForScroll = waitingForUserScroll;
+        debugState.currentTime = currentTime;
+        debugState.totalDuration = totalTimelineDuration;
+        debugState.sceneRanges = currentScenes.map(s => ({ sceneId: s.id, start: s.startTime, end: s.endTime }));
+        if (activeScene) {
+          debugState.activeScene = activeScene.id;
+          debugState.sceneStartTime = activeScene.startTime;
+          debugState.sceneEndTime = activeScene.endTime;
+          const sd = activeScene.endTime - activeScene.startTime;
+          debugState.sceneProgress = sd > 0 ? (currentTime - activeScene.startTime) / sd : 0;
+        } else {
+          debugState.sceneStartTime = 0;
+          debugState.sceneEndTime = 0;
+          debugState.sceneProgress = 0;
+        }
       } else if (timeline && scrollEnabledRef.current && totalTimelineDuration > 0 && !autoPlayWithGates) {
         // Legacy cinematic-only auto-advance (original behavior)
         const currentTime = scrollProgressRef.current * totalTimelineDuration;
@@ -691,8 +705,23 @@ export function useBasicTimeline({
             reportProgress(scrollProgressRef.current, activeScene.id);
           }
         }
+        // Update time-tracking debug state for legacy branch
+        debugState.currentTime = currentTime;
+        debugState.totalDuration = totalTimelineDuration;
+        debugState.sceneRanges = currentScenes.map(s => ({ sceneId: s.id, start: s.startTime, end: s.endTime }));
+        if (activeScene) {
+          debugState.activeScene = activeScene.id;
+          debugState.sceneStartTime = activeScene.startTime;
+          debugState.sceneEndTime = activeScene.endTime;
+          const sd = activeScene.endTime - activeScene.startTime;
+          debugState.sceneProgress = sd > 0 ? (currentTime - activeScene.startTime) / sd : 0;
+        } else {
+          debugState.sceneStartTime = 0;
+          debugState.sceneEndTime = 0;
+          debugState.sceneProgress = 0;
+        }
       }
-      
+
       hybridFrameId = requestAnimationFrame(hybridLoop);
     };
     

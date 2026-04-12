@@ -12,6 +12,9 @@ dist
 dist-ssr
 *.local
 
+# Story files — private, never pushed to public repo
+story/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

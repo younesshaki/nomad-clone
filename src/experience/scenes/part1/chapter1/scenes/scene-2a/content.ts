@@ -38,15 +38,17 @@ export const scene2a: NarrativeScene = {
   voiceOver: chapter1VoiceOvers["scene-2a"],
   mode: "2d",
   lines: [
-    { text: "She didn't argue." },
-    { text: "She didn't cry." },
-    { text: "She didn't explain." },
-    { text: "She just... refused." },
-    { text: "One week became two." },
-    { text: "Two became three." },
-    { text: "The principal called her parents." },
-    { text: "Her parents said: \"Talk to her.\"" },
-    { text: "No one could talk to her." },
-    { text: "But the other girls were watching." },
+    // Lines 0-3: appear during bg1 window (VO 0-8s). Adjust startTime to match your VO pacing.
+    { text: "She didn't argue.",    startTime: 0.5,  endTime: 20 },
+    { text: "She didn't cry.",      startTime: 2.0,  endTime: 20 },
+    { text: "She didn't explain.",  startTime: 3.5,  endTime: 20 },
+    { text: "She just... refused.", startTime: 5.0,  endTime: 20 },
+    // Lines 4-9: appear during bg2 window (VO 8-20s)
+    { text: "One week became two.",                  startTime: 8.5,  endTime: 20 },
+    { text: "Two became three.",                     startTime: 10.5, endTime: 20 },
+    { text: "The principal called her parents.",     startTime: 12.5, endTime: 20 },
+    { text: "Her parents said: \"Talk to her.\"",   startTime: 14.5, endTime: 20 },
+    { text: "No one could talk to her.",             startTime: 16.5, endTime: 20 },
+    { text: "But the other girls were watching.",    startTime: 18.5, endTime: 20 },
   ],
 };

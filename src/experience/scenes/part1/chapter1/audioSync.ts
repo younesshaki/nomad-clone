@@ -139,6 +139,52 @@ class AudioSyncRegistry {
   };
 
   /**
+   * Seek a scene's audio to a specific time (for preview scrubbing)
+   */
+  seekTo(sceneId: string, time: number): void {
+    const audio = this.audioElements.get(sceneId);
+    if (audio) {
+      audio.currentTime = Math.max(0, time);
+      // Fire listeners immediately so UI updates on seek
+      this.listeners.forEach(cb => cb(audio.currentTime, sceneId));
+    }
+  }
+
+  /**
+   * Play a scene's audio (used by preview panel)
+   */
+  play(sceneId: string): void {
+    const audio = this.audioElements.get(sceneId);
+    if (audio) {
+      audio.volume = 1;
+      audio.play().catch(() => {});
+    }
+  }
+
+  /**
+   * Pause a scene's audio (used by preview panel)
+   */
+  pause(sceneId: string): void {
+    const audio = this.audioElements.get(sceneId);
+    if (audio) audio.pause();
+  }
+
+  /**
+   * Get the total duration of a scene's audio in seconds (returns 0 if not loaded)
+   */
+  getDuration(sceneId: string): number {
+    const audio = this.audioElements.get(sceneId);
+    return audio?.duration && isFinite(audio.duration) ? audio.duration : 0;
+  }
+
+  /**
+   * Get all registered scene IDs
+   */
+  getRegisteredSceneIds(): string[] {
+    return Array.from(this.audioElements.keys());
+  }
+
+  /**
    * Clear all registrations (for cleanup)
    */
   clear(): void {

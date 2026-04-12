@@ -105,6 +105,8 @@ export function NarrativeOverlay({
                   <p
                     key={index}
                     className={`${lineClass}${line.className ? ` ${line.className}` : ""}`}
+                    data-start-time={line.startTime !== undefined ? String(line.startTime) : undefined}
+                    data-end-time={line.endTime !== undefined ? String(line.endTime) : undefined}
                   >
                     {line.text}
                   </p>
