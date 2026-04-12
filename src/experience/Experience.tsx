@@ -70,6 +70,7 @@ const getAdjacentScenes = (
 };
 
 import { DebugOverlay, DebugPanel } from "./utils/DebugOverlay";
+import { SyncPreviewPanel } from "./utils/SyncPreviewPanel";
 
 // Wrapper component to handle the hook and conditional rendering
 function DebugWrapper({ enabled }: { enabled: boolean }) {
@@ -78,6 +79,7 @@ function DebugWrapper({ enabled }: { enabled: boolean }) {
 
 export default function Experience() {
   const [debugEnabled, setDebugEnabled] = useState(false);
+  const [syncPreviewEnabled, setSyncPreviewEnabled] = useState(false);
 
   // Initialize Lenis smooth scroll + ScrollTrigger integration
   // This enables scrub-based animations throughout the app
@@ -97,6 +99,11 @@ export default function Experience() {
           return newValue;
         });
       }
+      // W to toggle sync preview panel
+      if (e.key.toLowerCase() === "w") {
+        e.preventDefault();
+        setSyncPreviewEnabled((prev) => !prev);
+      }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => {
@@ -104,6 +111,13 @@ export default function Experience() {
       window.removeEventListener("keydown", handleKeyDown);
     };
   }, []);
+
+  useEffect(() => {
+    document.body.dataset.syncPreviewOpen = syncPreviewEnabled ? "true" : "false";
+    return () => {
+      delete document.body.dataset.syncPreviewOpen;
+    };
+  }, [syncPreviewEnabled]);
 
   // Log debug state on each render
   console.log("[Experience] Render - debugEnabled:", debugEnabled);
@@ -401,6 +415,8 @@ export default function Experience() {
         )}
         {/* Debug panel rendered outside Canvas to avoid R3F reconciler issues */}
         <DebugPanel enabled={debugEnabled} />
+        {/* Sync preview panel — toggle with S key */}
+        <SyncPreviewPanel enabled={syncPreviewEnabled} />
         {/* ScrollIndicator rendered outside Canvas to avoid R3F reconciler issues */}
         <ScrollIndicator />
       </div>

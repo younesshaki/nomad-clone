@@ -1633,6 +1633,10 @@ export function Chapter1Narrative({ isActive, overlayRef }: Chapter1NarrativePro
     }
 
     const handleKeyDown = (event: KeyboardEvent) => {
+      if (document.body.dataset.syncPreviewOpen === "true") {
+        return;
+      }
+
       const scene = activeSceneRef.current;
       if (!scene) {
         return;

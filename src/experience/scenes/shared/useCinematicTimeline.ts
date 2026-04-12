@@ -53,6 +53,8 @@ export function useCinematicTimeline({
   const scenesRef = useRef<SceneData[]>([]);
   const cleanupFnsRef = useRef<(() => void)[]>([]);
   const initializingRef = useRef(false);
+  // Cancels the per-scene VO-sync RAF loop when transitioning away
+  const voSyncCancelRef = useRef<(() => void) | null>(null);
   
   const soundStateRef = useRef({ enabled: true, blocked: false });
   const { soundEnabled, soundBlocked } = useSoundSettings();
@@ -91,6 +93,12 @@ export function useCinematicTimeline({
       debugState.waitingForScroll = false;
       debugState.canScrollBack = false;
       debugState.activeScene = null;
+      debugState.currentTime = 0;
+      debugState.totalDuration = 0;
+      debugState.sceneProgress = 0;
+      debugState.sceneStartTime = 0;
+      debugState.sceneEndTime = 0;
+      debugState.sceneRanges = [];
       
       // Clean up event listeners
       cleanupFnsRef.current.forEach(fn => fn());
@@ -162,17 +170,18 @@ export function useCinematicTimeline({
     };
 
     // Create cinematic reveal animation for a scene
-    const createSceneTimeline = (scene: SceneData, sceneIndex: number): gsap.core.Timeline => {
+    const createSceneTimeline = (scene: SceneData, sceneIndex: number, voDelay: number): gsap.core.Timeline => {
       const tl = gsap.timeline({ paused: true });
       
-      // For the first scene, add an intro delay for dramatic effect
       const isFirstScene = sceneIndex === 0;
-      const contentDelay = isFirstScene ? introDelay : 0.5;
+      const titleStart = 0;
+      const titleDuration = 1.8;
+      const nonVoLineStart = isFirstScene ? introDelay + 1.2 : 1.7;
       
       // Determine actual scene duration - use VO duration if available and longer
       // Text should finish with or slightly before VO ends
-      const effectiveDuration = scene.voDuration > 0 
-        ? Math.max(sceneDuration, scene.voDuration) // Match VO duration exactly
+      const effectiveDuration = scene.voDuration > 0
+        ? Math.max(sceneDuration, voDelay + scene.voDuration)
         : sceneDuration;
       
       // Set initial state
@@ -180,10 +189,7 @@ export function useCinematicTimeline({
         tl.set(scene.inner, { autoAlpha: 1 });
       }
       
-      // Add initial delay (especially for first scene)
-      tl.to({}, { duration: contentDelay });
-      
-      // Reveal title with dramatic entrance (after the delay)
+      // Reveal title independently from the VO delay so scene 1 can open on the title
       if (scene.title) {
         tl.fromTo(
           scene.title,
@@ -198,42 +204,34 @@ export function useCinematicTimeline({
             autoAlpha: 1, 
             filter: "blur(0px)",
             y: 0,
-            duration: 1.8, 
+            duration: titleDuration,
             ease: "power4.out" 
           },
-          contentDelay
+          titleStart
         );
       }
       
       // Calculate timing for lines based on effective duration
-      const linesStartTime = contentDelay + 1.2; // Start lines after title begins
       // Lines should finish with VO - account for line animation duration
       const lastLineAnimDuration = 1.2;
-      const availableTime = effectiveDuration - linesStartTime - lastLineAnimDuration;
+      const availableTime = effectiveDuration - nonVoLineStart - lastLineAnimDuration;
       
-      // Reveal lines one by one with stagger
+      // Reveal lines one by one with stagger.
+      // Lines that have data-start-time are VO-synced — skip the GSAP auto-reveal;
+      // the per-scene RAF loop in playScene handles those.
       if (scene.lines.length > 0) {
         const lineDelay = availableTime / scene.lines.length;
-        
+
         scene.lines.forEach((line, index) => {
-          const startTime = linesStartTime + (index * lineDelay);
-          
+          if (line.dataset.startTime !== undefined) {
+            // VO-synced: stay hidden until audio reaches startTime
+            return;
+          }
+          const startTime = nonVoLineStart + (index * lineDelay);
           tl.fromTo(
             line,
-            {
-              y: 60,
-              autoAlpha: 0,
-              filter: "blur(10px)",
-              scale: 0.95,
-            },
-            {
-              y: 0,
-              autoAlpha: 1,
-              filter: "blur(0px)",
-              scale: 1,
-              duration: 1.2,
-              ease: "power3.out",
-            },
+            { y: 60, autoAlpha: 0, filter: "blur(10px)", scale: 0.95 },
+            { y: 0, autoAlpha: 1, filter: "blur(0px)", scale: 1, duration: 1.2, ease: "power3.out" },
             startTime
           );
         });
@@ -268,6 +266,10 @@ export function useCinematicTimeline({
         }
       });
       
+      // Cancel previous VO-sync loop before starting new scene
+      voSyncCancelRef.current?.();
+      voSyncCancelRef.current = null;
+
       // Kill any existing tweens on this scene's elements to prevent interference
       if (scene.inner) gsap.killTweensOf(scene.inner);
       if (scene.title) gsap.killTweensOf(scene.title);
@@ -298,17 +300,44 @@ export function useCinematicTimeline({
           filter: "blur(10px)" 
         });
       });
-      
+      
+      // voDelay must be known before createSceneTimeline so effectiveDuration is correct
+      const voDelay = isFirstScene ? introDelay : 0.8;
+
       // Create and play the scene timeline
       if (sceneTimelineRef.current) {
         sceneTimelineRef.current.kill();
       }
-      
-      const tl = createSceneTimeline(scene, index);
+
+      const tl = createSceneTimeline(scene, index, voDelay);
       sceneTimelineRef.current = tl;
-      
+
+      // Build cumulative scene ranges for debug panel
+      let cumulative = 0;
+      const sceneRanges = scenes.map((s, i) => {
+        const delay = i === 0 ? introDelay : 0.8;
+        const dur = s.voDuration > 0 ? Math.max(sceneDuration, delay + s.voDuration) : sceneDuration;
+        const start = cumulative;
+        cumulative += dur;
+        return { sceneId: s.id, start, end: cumulative };
+      });
+      const totalDur = cumulative;
+      const sceneStart = sceneRanges[index]?.start ?? 0;
+      const sceneEnd = sceneRanges[index]?.end ?? sceneStart + tl.duration();
+      debugState.sceneRanges = sceneRanges;
+      debugState.totalDuration = totalDur;
+      debugState.sceneStartTime = sceneStart;
+      debugState.sceneEndTime = sceneEnd;
+
+      // Update per-frame time progress while scene plays
+      tl.eventCallback("onUpdate", () => {
+        const elapsed = tl.time();
+        const tlDur = tl.duration();
+        debugState.currentTime = sceneStart + elapsed;
+        debugState.sceneProgress = tlDur > 0 ? elapsed / tlDur : 0;
+      });
+
       // Play voiceover if available - delay for first scene to sync with title
-      const voDelay = isFirstScene ? introDelay : 0.8;
       if (scene.voiceOverUrl) {
         gsap.delayedCall(voDelay, () => {
           playSceneAudio(scene.id, scene.voiceOverUrl!);
@@ -317,7 +346,40 @@ export function useCinematicTimeline({
       
       // Play the timeline
       tl.play();
-      
+
+      // VO-synced line reveal: RAF loop that reads audio.currentTime and
+      // shows/hides lines based on their data-start-time / data-end-time.
+      // Only runs for lines that have data-start-time set.
+      const timedLines = scene.lines.filter(l => l.dataset.startTime !== undefined);
+      if (timedLines.length > 0) {
+        const lineShown = new WeakMap<HTMLElement, boolean>();
+        let rafId = 0;
+        const revealLoop = () => {
+          const audio = audioMapRef.current[scene.id];
+          if (audio) {
+            const voTime = audio.currentTime;
+            const audioStarted = !audio.paused || voTime > 0;
+            timedLines.forEach(line => {
+              const start = parseFloat(line.dataset.startTime!);
+              const endRaw = line.dataset.endTime;
+              const end = endRaw !== undefined ? parseFloat(endRaw) : Infinity;
+              const shouldShow = audioStarted && voTime >= start && voTime < end;
+              const was = lineShown.get(line) ?? false;
+              if (shouldShow === was) return;
+              lineShown.set(line, shouldShow);
+              if (shouldShow) {
+                gsap.to(line, { y: 0, autoAlpha: 1, filter: "blur(0px)", scale: 1, duration: 0.8, ease: "power2.out" });
+              } else {
+                gsap.to(line, { autoAlpha: 0, duration: 0.3 });
+              }
+            });
+          }
+          rafId = requestAnimationFrame(revealLoop);
+        };
+        rafId = requestAnimationFrame(revealLoop);
+        voSyncCancelRef.current = () => cancelAnimationFrame(rafId);
+      }
+
       // When scene ends, wait for scroll
       tl.eventCallback("onComplete", () => {
         console.log(`[Cinematic] Scene ${scene.id} complete. Waiting for scroll...`);
@@ -715,7 +777,9 @@ export function useCinematicTimeline({
     // Cleanup
     return () => {
       initializingRef.current = false;
-      
+      voSyncCancelRef.current?.();
+      voSyncCancelRef.current = null;
+
       cleanupFnsRef.current.forEach(fn => fn());
       cleanupFnsRef.current = [];
       
