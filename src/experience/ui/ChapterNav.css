@@ -60,7 +60,7 @@
   padding: 0;
   min-height: var(--h-button);
   min-width: var(--w-button);
-  box-shadow: 0 8px 20px rgba(58, 24, 116, 0.35);
+  box-shadow: 0 8px 20px rgba(116, 24, 24, 0.35);
 }
 .chapterNavSelectWrap::before,
 .chapterNavSelectWrap::after {
@@ -201,10 +201,10 @@
   transition: all 0.25s ease;
   background: radial-gradient(
       65.28% 65.28% at 50% 100%,
-      rgba(223, 113, 255, 0.8) 0%,
+      rgba(155, 13, 13, 0.8) 0%,
       rgba(223, 113, 255, 0) 100%
     ),
-    linear-gradient(0deg, #7a5af8, #7a5af8);
+    linear-gradient(0deg, #f85a5a, #f85a5a);
   border-radius: var(--round);
   border: none;
   outline: none;
@@ -233,10 +233,10 @@
   --space: 2px;
   background: radial-gradient(
       65.28% 65.28% at 50% 100%,
-      rgba(223, 113, 255, 0.8) 0%,
+      rgba(255, 113, 113, 0.8) 0%,
       rgba(223, 113, 255, 0) 100%
     ),
-    linear-gradient(0deg, #7a5af8, #7a5af8);
+    linear-gradient(0deg, #dd0606, #f85a5a);
 }
 .button:active {
   transform: scale(0.95);
@@ -253,7 +253,7 @@
   transition: all 0.5s ease-in-out;
   background: radial-gradient(
     100% 75% at 55%,
-    rgba(223, 113, 255, 0.8) 0%,
+    rgba(128, 10, 10, 0.8) 0%,
     rgba(223, 113, 255, 0) 100%
   );
   box-shadow: 0 0 3px black;
@@ -416,4 +416,47 @@
   cursor: not-allowed;
   opacity: 0.6;
   transform: none;
+}
+
+@media (max-width: 900px) {
+  .chapterNav {
+    gap: 0.75rem;
+  }
+
+  .chapterNavSelectWrap {
+    --w-button: 190px;
+  }
+}
+
+@media (max-width: 640px) {
+  .chapterNav {
+    width: calc(100vw - 24px);
+    max-width: 420px;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .chapterNavLabel {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .chapterNavSelectWrap {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .chapterNavButtonRow {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .button {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .inner {
+    font-size: 14px;
+  }
 }

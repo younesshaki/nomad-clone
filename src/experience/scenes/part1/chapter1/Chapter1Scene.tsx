@@ -11,8 +11,34 @@ type Chapter1SceneProps = {
 };
 
 export function Chapter1Scene({ overlayRef }: Chapter1SceneProps) {
-  const { scene: scene1Model } = useDisposableGLTF(chapterSceneAssets.models.scene1);
-  const { scene: scene2Model } = useDisposableGLTF(chapterSceneAssets.models.scene2);
+  const scene1Url = chapterSceneAssets.models.scene1;
+  const scene2Url = chapterSceneAssets.models.scene2;
+
+  if (!scene1Url || !scene2Url) {
+    return null;
+  }
+
+  return (
+    <Chapter1SceneModels
+      overlayRef={overlayRef}
+      scene1Url={scene1Url}
+      scene2Url={scene2Url}
+    />
+  );
+}
+
+type Chapter1SceneModelsProps = Chapter1SceneProps & {
+  scene1Url: string;
+  scene2Url: string;
+};
+
+function Chapter1SceneModels({
+  overlayRef,
+  scene1Url,
+  scene2Url,
+}: Chapter1SceneModelsProps) {
+  const { scene: scene1Model } = useDisposableGLTF(scene1Url);
+  const { scene: scene2Model } = useDisposableGLTF(scene2Url);
   const scene5ElementRef = useRef<HTMLElement | null>(null);
   const scene2ElementRef = useRef<HTMLElement | null>(null);
   const scene1OpacityRef = useRef(1);
@@ -55,7 +81,7 @@ export function Chapter1Scene({ overlayRef }: Chapter1SceneProps) {
         overlayRef.current.querySelector<HTMLElement>(".scene-5 .narrativeSceneInner") ??
         null;
       scene2ElementRef.current =
-        overlayRef.current.querySelector<HTMLElement>(".scene-2 .narrativeSceneInner") ??
+        overlayRef.current.querySelector<HTMLElement>(".scene-2a .narrativeSceneInner") ??
         null;
     }
   }, [overlayRef]);
@@ -102,7 +128,7 @@ export function Chapter1Scene({ overlayRef }: Chapter1SceneProps) {
     }
     if (!scene2ElementRef.current && overlayRef?.current) {
       scene2ElementRef.current =
-        overlayRef.current.querySelector<HTMLElement>(".scene-2 .narrativeSceneInner") ??
+        overlayRef.current.querySelector<HTMLElement>(".scene-2a .narrativeSceneInner") ??
         null;
     }
 

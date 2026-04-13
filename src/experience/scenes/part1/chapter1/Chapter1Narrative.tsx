@@ -14,6 +14,18 @@ import { scene3bBackgroundImages, scene3bImageCues } from "./scenes/scene-3b/con
 import { scene4aBackgroundImages, scene4aImageCues, scene4aVideoCue } from "./scenes/scene-4a/content";
 import { audioSyncRegistry } from "./audioSync";
 
+const devLog = (...args: unknown[]) => {
+  if (import.meta.env.DEV) {
+    console.log(...args);
+  }
+};
+
+const devError = (...args: unknown[]) => {
+  if (import.meta.env.DEV) {
+    console.error(...args);
+  }
+};
+
 type Chapter1NarrativeProps = {
   isActive: boolean;
   overlayRef: RefObject<HTMLDivElement>;
@@ -997,7 +1009,7 @@ export function Chapter1Narrative({ isActive, overlayRef }: Chapter1NarrativePro
       img.draggable = false;
       img.setAttribute("fetchpriority", index === 0 ? "high" : "low");
       img.addEventListener("load", () => {
-        console.log(`[Scene3b] Image ${index + 1} loaded`);
+        devLog(`[Scene3b] Image ${index + 1} loaded`);
       });
       return img;
     });
@@ -1210,7 +1222,7 @@ export function Chapter1Narrative({ isActive, overlayRef }: Chapter1NarrativePro
       img.draggable = false;
       img.setAttribute("fetchpriority", index === 0 ? "high" : "low");
       img.addEventListener("load", () => {
-        console.log(`[Scene4a] Image ${index + 1} loaded`);
+        devLog(`[Scene4a] Image ${index + 1} loaded`);
       });
       return img;
     });
@@ -1240,11 +1252,11 @@ export function Chapter1Narrative({ isActive, overlayRef }: Chapter1NarrativePro
     // Track video ready state
     let videoReady = false;
     video.addEventListener("loadeddata", () => {
-      console.log("[Scene4a] Video loaded and ready, readyState:", video.readyState);
+      devLog("[Scene4a] Video loaded and ready, readyState:", video.readyState);
       videoReady = true;
     });
     video.addEventListener("error", (e) => {
-      console.error("[Scene4a] Video error:", e, video.error);
+      devError("[Scene4a] Video error:", e, video.error);
     });
     // Force video to start loading
     video.load();
@@ -1257,7 +1269,7 @@ export function Chapter1Narrative({ isActive, overlayRef }: Chapter1NarrativePro
     scene4aPortalRef.current = portalRoot;
     scene4aImagesRef.current = images;
     
-    console.log("[Scene4a] Slideshow initialized, video src:", video.src);
+    devLog("[Scene4a] Slideshow initialized, video src:", video.src);
 
     let currentImageIndex = 0;
     let isVideoActive = false;
@@ -1322,9 +1334,9 @@ export function Chapter1Narrative({ isActive, overlayRef }: Chapter1NarrativePro
     const transitionToVideo = () => {
       if (isVideoActive) return;
       
-      console.log("[Scene4a] Transitioning to video");
-      console.log("[Scene4a] Video src:", video.src);
-      console.log("[Scene4a] Video readyState:", video.readyState, "videoReady:", videoReady);
+      devLog("[Scene4a] Transitioning to video");
+      devLog("[Scene4a] Video src:", video.src);
+      devLog("[Scene4a] Video readyState:", video.readyState, "videoReady:", videoReady);
       isVideoActive = true;
       
       // Fade out current image
@@ -1341,9 +1353,9 @@ export function Chapter1Narrative({ isActive, overlayRef }: Chapter1NarrativePro
         const playPromise = video.play();
         if (playPromise !== undefined) {
           playPromise.then(() => {
-            console.log("[Scene4a] Video playing successfully");
+            devLog("[Scene4a] Video playing successfully");
           }).catch((err) => {
-            console.error("[Scene4a] Video play failed:", err);
+            devError("[Scene4a] Video play failed:", err);
           });
         }
         gsap.fromTo(video, 
@@ -1361,9 +1373,9 @@ export function Chapter1Narrative({ isActive, overlayRef }: Chapter1NarrativePro
       if (video.readyState >= 3) { // HAVE_FUTURE_DATA or HAVE_ENOUGH_DATA
         playVideo();
       } else {
-        console.log("[Scene4a] Video not ready, waiting for canplay event");
+        devLog("[Scene4a] Video not ready, waiting for canplay event");
         video.addEventListener("canplay", () => {
-          console.log("[Scene4a] Video canplay fired, now playing");
+          devLog("[Scene4a] Video canplay fired, now playing");
           playVideo();
         }, { once: true });
       }
@@ -1401,12 +1413,12 @@ export function Chapter1Narrative({ isActive, overlayRef }: Chapter1NarrativePro
       if (!isSceneVisible) {
         // Log occasionally to avoid spam
         if (Math.floor(currentTime) !== Math.floor(lastAudioTime)) {
-          console.log("[Scene4a] Audio update received but scene not visible yet, time:", currentTime.toFixed(2));
+          devLog("[Scene4a] Audio update received but scene not visible yet, time:", currentTime.toFixed(2));
         }
         return;
       }
       
-      console.log("[Scene4a] Audio sync update, time:", currentTime.toFixed(2), "sceneId:", sceneId);
+      devLog("[Scene4a] Audio sync update, time:", currentTime.toFixed(2), "sceneId:", sceneId);
       
       // Check if we should show video (after all images)
       if (currentTime >= scene4aVideoCue.startTime && currentTime < scene4aVideoCue.endTime) {
@@ -1472,11 +1484,11 @@ export function Chapter1Narrative({ isActive, overlayRef }: Chapter1NarrativePro
 
       const nowVisible = nextOpacity > 0.1;
       if (nowVisible && !isSceneVisible) {
-        console.log("[Scene4a] Scene became visible, opacity:", nextOpacity.toFixed(2));
+        devLog("[Scene4a] Scene became visible, opacity:", nextOpacity.toFixed(2));
         isSceneVisible = true;
         resetImages();
       } else if (!nowVisible && isSceneVisible) {
-        console.log("[Scene4a] Scene became hidden");
+        devLog("[Scene4a] Scene became hidden");
         isSceneVisible = false;
       }
 
@@ -1500,6 +1512,10 @@ export function Chapter1Narrative({ isActive, overlayRef }: Chapter1NarrativePro
   }, [overlayRef]);
 
   useEffect(() => {
+    if (!scene5VideoUrl) {
+      return;
+    }
+
     if (portalRootRef.current) {
       return;
     }
@@ -1649,7 +1665,7 @@ export function Chapter1Narrative({ isActive, overlayRef }: Chapter1NarrativePro
         const y = Number.parseFloat(
           scene.style.getPropertyValue("--scene-y") || "0"
         );
-        console.log(
+        devLog(
           `${scene.className.split(" ").find((name) => name.startsWith("scene-"))} position: { x: ${x}, y: ${y} }`
         );
         return;

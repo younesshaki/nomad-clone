@@ -7,6 +7,12 @@
 
 type AudioSyncCallback = (currentTime: number, sceneId: string) => void;
 
+const devLog = (...args: unknown[]) => {
+  if (import.meta.env.DEV) {
+    console.log(...args);
+  }
+};
+
 class AudioSyncRegistry {
   private listeners: Set<AudioSyncCallback> = new Set();
   private audioElements: Map<string, HTMLAudioElement> = new Map();
@@ -17,7 +23,7 @@ class AudioSyncRegistry {
    * Register an audio element for a scene
    */
   registerAudio(sceneId: string, audio: HTMLAudioElement): void {
-    console.log(`[AudioSync] Registering audio for scene: ${sceneId}`);
+    devLog(`[AudioSync] Registering audio for scene: ${sceneId}`);
     this.audioElements.set(sceneId, audio);
     this.startPolling();
   }
@@ -125,7 +131,9 @@ class AudioSyncRegistry {
         // Log occasionally for debugging
         const now = Date.now();
         if (!this.lastLogTime[sceneId] || now - this.lastLogTime[sceneId] > 2000) {
-          console.log(`[AudioSync] Polling ${sceneId}, time: ${audio.currentTime.toFixed(2)}, paused: ${audio.paused}`);
+          devLog(
+            `[AudioSync] Polling ${sceneId}, time: ${audio.currentTime.toFixed(2)}, paused: ${audio.paused}`
+          );
           this.lastLogTime[sceneId] = now;
         }
         

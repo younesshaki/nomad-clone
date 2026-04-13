@@ -6,68 +6,24 @@ import SceneManager from "./SceneManager";
 import FadeOverlay from "./FadeOverlay";
 import ChapterNav from "./ui/ChapterNav";
 import CanvasErrorBoundary from "./CanvasErrorBoundary";
-import PreloadGate from "./ui/PreloadGate";
 import { LoaderOverlay } from "./loaders/shared/LoaderOverlay";
 import type { LoaderVariant } from "./loaders/shared/types";
 import { Suspense, useCallback, useEffect, useRef, useState } from "react";
 import { parts } from "./parts";
 import gsap from "gsap";
 import { ModelPreloader } from "./ModelPreloader";
-import { preloadSceneAssets, preloadAdjacentChapters } from "./sceneAssets";
+import { preloadAdjacentChapters } from "./sceneAssets";
 import { useLoadingController } from "./hooks/useLoadingController";
 import { SoundProvider } from "./soundContext";
 import { useSmoothScroll } from "./hooks/useSmoothScroll";
 import { ScrollIndicator } from "./scenes/shared/ScrollIndicator";
-
-type SceneLocation = {
-  partIndex: number;
-  chapterIndex: number;
-};
-
-const getAdjacentScenes = (
-  partIndex: number,
-  chapterIndex: number,
-  partsData: typeof parts
-): SceneLocation[] => {
-  const scenes: SceneLocation[] = [{ partIndex, chapterIndex }];
-  const currentPart = partsData[partIndex];
-  const chapterCount = currentPart?.chapters.length ?? 0;
-
-  let prevPartIndex = partIndex;
-  let prevChapterIndex = chapterIndex - 1;
-  if (prevChapterIndex < 0) {
-    prevPartIndex = partIndex - 1;
-    if (prevPartIndex >= 0) {
-      const prevPart = partsData[prevPartIndex];
-      prevChapterIndex = Math.max(0, prevPart.chapters.length - 1);
-    }
-  }
-  if (prevPartIndex >= 0 && prevChapterIndex >= 0) {
-    scenes.push({ partIndex: prevPartIndex, chapterIndex: prevChapterIndex });
-  }
-
-  let nextPartIndex = partIndex;
-  let nextChapterIndex = chapterIndex + 1;
-  if (nextChapterIndex >= chapterCount) {
-    nextPartIndex = partIndex + 1;
-    if (nextPartIndex < partsData.length) {
-      nextChapterIndex = 0;
-    }
-  }
-  if (nextPartIndex < partsData.length && nextChapterIndex >= 0) {
-    scenes.push({ partIndex: nextPartIndex, chapterIndex: nextChapterIndex });
-  }
-
-  return scenes.filter(
-    (scene, index, list) =>
-      index ===
-      list.findIndex(
-        (value) =>
-          value.partIndex === scene.partIndex &&
-          value.chapterIndex === scene.chapterIndex
-      )
-  );
-};
+import { useStory } from "./story/StoryProvider";
+import {
+  getChapterDefinition,
+  getChapterIndicesById,
+  getFirstSceneId,
+  getPartDefinition,
+} from "./story/manifest";
 
 import { DebugOverlay, DebugPanel } from "./utils/DebugOverlay";
 import { SyncPreviewPanel } from "./utils/SyncPreviewPanel";
@@ -78,26 +34,31 @@ function DebugWrapper({ enabled }: { enabled: boolean }) {
 }
 
 export default function Experience() {
+  const devToolsEnabled = import.meta.env.DEV;
   const [debugEnabled, setDebugEnabled] = useState(false);
   const [syncPreviewEnabled, setSyncPreviewEnabled] = useState(false);
+  const {
+    isReady: storyReady,
+    state: storyState,
+    saveCheckpoint,
+    setCurrentLocation,
+    updatePreferences,
+  } = useStory();
 
   // Initialize Lenis smooth scroll + ScrollTrigger integration
   // This enables scrub-based animations throughout the app
   useSmoothScroll(true);
 
   useEffect(() => {
-    console.log("[Experience] Component mounted, adding Q key listener");
-    
+    if (!devToolsEnabled) {
+      return;
+    }
+
     const handleKeyDown = (e: KeyboardEvent) => {
-      console.log("[Experience] Key pressed:", e.key);
       // Q to toggle debug mode
       if (e.key.toLowerCase() === "q") {
         e.preventDefault();
-        setDebugEnabled((prev) => {
-          const newValue = !prev;
-          console.log("[DEV] Debug mode toggled to:", newValue);
-          return newValue;
-        });
+        setDebugEnabled((prev) => !prev);
       }
       // W to toggle sync preview panel
       if (e.key.toLowerCase() === "w") {
@@ -107,10 +68,9 @@ export default function Experience() {
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => {
-      console.log("[Experience] Removing Q key listener");
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, []);
+  }, [devToolsEnabled]);
 
   useEffect(() => {
     document.body.dataset.syncPreviewOpen = syncPreviewEnabled ? "true" : "false";
@@ -118,9 +78,6 @@ export default function Experience() {
       delete document.body.dataset.syncPreviewOpen;
     };
   }, [syncPreviewEnabled]);
-
-  // Log debug state on each render
-  console.log("[Experience] Render - debugEnabled:", debugEnabled);
 
   const { isLoading, progress } = useLoadingController();
   
@@ -148,7 +105,6 @@ export default function Experience() {
   const [visibleChapterIndex, setVisibleChapterIndex] = useState(initialState.chapterIndex);
   const [visiblePartIndex, setVisiblePartIndex] = useState(initialState.partIndex);
   const [sceneIndex, setSceneIndex] = useState(initialState.chapterIndex + 1);
-  const [goTo, setGoTo] = useState<((partIndex: number, chapterIndex: number) => void) | null>(null);
   
   // Sync state to URL hash
   useEffect(() => {
@@ -165,9 +121,9 @@ export default function Experience() {
   const [canHideLoader, setCanHideLoader] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [soundBlocked, setSoundBlocked] = useState(false);
-  const [preloadGateOpen, setPreloadGateOpen] = useState(false);
   const controlsRef = useRef<OrbitControlsImpl | null>(null);
   const transitionRef = useRef<gsap.core.Timeline | null>(null);
+  const restoredFromStoryRef = useRef(false);
   const loaderTextByPart = [
     "Loading Genesis",
     "Loading Trials",
@@ -195,7 +151,7 @@ export default function Experience() {
   );
   const isCyberOcean = visiblePartIndex === 2 && visibleChapterIndex === 0;
   const shouldShowLoader = showLoader && !canHideLoader;
-  const preloaderVisible = preloadGateOpen && !initialRevealReady;
+  const preloaderVisible = !initialRevealReady;
   const scenesHidden = shouldShowLoader || preloaderVisible || fade > 0.01;
   const cameraEnabled = !preloaderVisible && !shouldShowLoader && !isCyberOcean;
 
@@ -211,39 +167,93 @@ export default function Experience() {
     }
   }, [showLoader, modelsPreloaded]);
 
-  console.log("Experience component rendered", {
-    fade,
-    part: activePartIndex,
-    chapter: activeChapterIndex,
-    visibleChapter: visibleChapterIndex,
-    showLoader,
-    canHideLoader,
-    shouldShowLoader,
-  });
-
   useEffect(() => {
     setSceneIndex(visibleChapterIndex + 1);
   }, [visibleChapterIndex]);
 
   useEffect(() => {
-    setSoundEnabled(true);
-    setSoundBlocked(false);
-  }, []);
-
-  useEffect(() => {
-    if (!preloadGateOpen) {
+    if (!storyReady) {
       return;
     }
 
+    setSoundEnabled(storyState.preferences.soundEnabled);
+    setSoundBlocked(false);
+  }, [storyReady, storyState.preferences.soundEnabled]);
+
+  useEffect(() => {
+    if (restoredFromStoryRef.current || !storyReady) {
+      return;
+    }
+
+    restoredFromStoryRef.current = true;
+    if (window.location.hash) {
+      return;
+    }
+
+    const chapterId = storyState.resumeCheckpoint?.chapterId ?? storyState.currentChapterId;
+    const indices = getChapterIndicesById(chapterId);
+    if (!indices) {
+      return;
+    }
+
+    setActivePartIndex(indices.partIndex);
+    setActiveChapterIndex(indices.chapterIndex);
+    setVisiblePartIndex(indices.partIndex);
+    setVisibleChapterIndex(indices.chapterIndex);
+    setSceneIndex(indices.chapterIndex + 1);
+  }, [storyReady, storyState.currentChapterId, storyState.resumeCheckpoint]);
+
+  useEffect(() => {
+    if (!storyReady) {
+      return;
+    }
+
+    const partDefinition = getPartDefinition(activePartIndex + 1);
+    const chapterDefinition = getChapterDefinition(activePartIndex + 1, activeChapterIndex + 1);
+    if (!partDefinition || !chapterDefinition) {
+      return;
+    }
+
+    void setCurrentLocation(
+      partDefinition.id,
+      chapterDefinition.id,
+      getFirstSceneId(chapterDefinition)
+    );
+  }, [activeChapterIndex, activePartIndex, setCurrentLocation, storyReady]);
+
+  useEffect(() => {
+    if (!storyReady) {
+      return;
+    }
+
+    const partDefinition = getPartDefinition(visiblePartIndex + 1);
+    const chapterDefinition = getChapterDefinition(visiblePartIndex + 1, visibleChapterIndex + 1);
+    if (!partDefinition || !chapterDefinition) {
+      return;
+    }
+
+    void saveCheckpoint(
+      partDefinition.id,
+      chapterDefinition.id,
+      getFirstSceneId(chapterDefinition),
+      0,
+      {
+        partIndex: visiblePartIndex,
+        chapterIndex: visibleChapterIndex,
+      }
+    );
+  }, [saveCheckpoint, storyReady, visibleChapterIndex, visiblePartIndex]);
+
+  useEffect(() => {
     setModelsPreloaded(false);
     setPreloadMinElapsed(false);
     setInitialRevealReady(false);
     const timer = window.setTimeout(() => setPreloadMinElapsed(true), 7800);
     return () => window.clearTimeout(timer);
-  }, [preloadGateOpen]);
+  }, []);
 
   useEffect(() => {
-    if (!preloadGateOpen || modelsPreloaded) {
+    if (modelsPreloaded) {
       return;
     }
 
@@ -253,7 +263,7 @@ export default function Experience() {
       });
       return () => window.cancelAnimationFrame(rafId);
     }
-  }, [isLoading, preloadGateOpen, preloadMinElapsed, modelsPreloaded]);
+  }, [isLoading, preloadMinElapsed, modelsPreloaded]);
 
   useEffect(() => {
     if (!modelsPreloaded || initialRevealReady) {
@@ -324,26 +334,21 @@ export default function Experience() {
   );
   
   const handleToggleSound = () => {
+    let nextSoundEnabled: boolean;
     if (!soundEnabled || soundBlocked) {
+      nextSoundEnabled = true;
       setSoundEnabled(true);
       setSoundBlocked(false);
     } else {
+      nextSoundEnabled = false;
       setSoundEnabled(false);
     }
+
+    void updatePreferences({ soundEnabled: nextSoundEnabled });
   };
 
-  const handleStartExperience = () => {
-    setPreloadGateOpen(true);
-    setSoundEnabled(true);
-    setSoundBlocked(false);
-  };
-
-  let content: JSX.Element;
-
-  if (!preloadGateOpen) {
-    content = <PreloadGate onStart={handleStartExperience} />;
-  } else {
-    content = (
+  return (
+    <SoundProvider value={{ soundEnabled, soundBlocked }}>
       <div style={{ position: "relative", width: "100%", height: "100%" }}>
         <ModelPreloader />
         <CanvasErrorBoundary key={`part-${visiblePartIndex}-chapter-${visibleChapterIndex}`}>
@@ -364,7 +369,7 @@ export default function Experience() {
             camera={{ position: [0, 0, 5], fov: 75, far: 10000 }}
           >
             <color attach="background" args={["black"]} />
-            {debugEnabled && <DebugWrapper enabled={debugEnabled} />}
+            {devToolsEnabled && debugEnabled && <DebugWrapper enabled={debugEnabled} />}
             <CameraRig
               key={`${sceneIndex}-${visiblePartIndex}-${visibleChapterIndex}`}
               sceneIndex={sceneIndex}
@@ -414,18 +419,12 @@ export default function Experience() {
           />
         )}
         {/* Debug panel rendered outside Canvas to avoid R3F reconciler issues */}
-        <DebugPanel enabled={debugEnabled} />
+        <DebugPanel enabled={devToolsEnabled && debugEnabled} />
         {/* Sync preview panel — toggle with S key */}
-        <SyncPreviewPanel enabled={syncPreviewEnabled} />
+        <SyncPreviewPanel enabled={devToolsEnabled && syncPreviewEnabled} />
         {/* ScrollIndicator rendered outside Canvas to avoid R3F reconciler issues */}
         <ScrollIndicator />
       </div>
-    );
-  }
-
-  return (
-    <SoundProvider value={{ soundEnabled, soundBlocked }}>
-      {content}
     </SoundProvider>
   );
 }

@@ -91,3 +91,12 @@
 .loaderSoundButton:hover {
   background: rgba(20, 20, 20, 0.95);
 }
+
+@media (max-width: 640px) {
+  .loaderSoundButton {
+    right: 16px;
+    bottom: 16px;
+    padding: 9px 14px;
+    font-size: 11px;
+  }
+}

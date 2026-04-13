@@ -36,7 +36,7 @@ export function useActiveNarrativeScene(
         const sceneNodes = Array.from(
           overlayRoot.querySelectorAll<HTMLElement>(".narrativeScene")
         );
-        let bestScene: HTMLElement | null = null;
+        let bestSceneClassName: string | null = null;
         let bestOpacity = 0;
         sceneNodes.forEach((sceneNode) => {
           const inner = sceneNode.querySelector<HTMLElement>(".narrativeSceneInner");
@@ -51,14 +51,14 @@ export function useActiveNarrativeScene(
           const resolvedOpacity = Number.isFinite(opacityValue) ? opacityValue : 0;
           if (resolvedOpacity > bestOpacity) {
             bestOpacity = resolvedOpacity;
-            bestScene = sceneNode;
+            bestSceneClassName = sceneNode.className;
           }
         });
 
+        const sceneClassName =
+          typeof bestSceneClassName === "string" ? bestSceneClassName : "";
         const nextId =
-          bestScene?.className
-            .split(" ")
-            .find((name) => name.startsWith("scene-")) ?? null;
+          sceneClassName.split(" ").find((name: string) => name.startsWith("scene-")) ?? null;
 
         if (nextId && nextId !== lastId) {
           const scene = scenes.find((entry) => entry.id === nextId);

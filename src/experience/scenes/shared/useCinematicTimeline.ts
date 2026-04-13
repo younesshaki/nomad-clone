@@ -4,6 +4,18 @@ import { useSoundSettings } from "../../soundContext";
 import { debugState } from "../../utils/DebugOverlay";
 import { audioSyncRegistry } from "../part1/chapter1/audioSync";
 
+const devLog = (...args: unknown[]) => {
+  if (import.meta.env.DEV) {
+    console.log(...args);
+  }
+};
+
+const devWarn = (...args: unknown[]) => {
+  if (import.meta.env.DEV) {
+    console.warn(...args);
+  }
+};
+
 /**
  * useCinematicTimeline
  * 
@@ -66,7 +78,7 @@ export function useCinematicTimeline({
   // Reset everything when chapter becomes inactive
   useEffect(() => {
     if (!isActive) {
-      console.log("[Cinematic] Chapter inactive - resetting state");
+      devLog("[Cinematic] Chapter inactive - resetting state");
       
       // Kill any running animations
       if (sceneTimelineRef.current) {
@@ -257,7 +269,7 @@ export function useCinematicTimeline({
       debugState.activeScene = scene.id;
       
       const isFirstScene = index === 0;
-      console.log(`[Cinematic] Playing scene ${index + 1}/${scenes.length}: ${scene.id}${isFirstScene ? ' (with intro delay)' : ''}`);
+      devLog(`[Cinematic] Playing scene ${index + 1}/${scenes.length}: ${scene.id}${isFirstScene ? ' (with intro delay)' : ''}`);
       
       // Hide all other scenes
       scenes.forEach((s, i) => {
@@ -382,7 +394,7 @@ export function useCinematicTimeline({
 
       // When scene ends, wait for scroll
       tl.eventCallback("onComplete", () => {
-        console.log(`[Cinematic] Scene ${scene.id} complete. Waiting for scroll...`);
+        devLog(`[Cinematic] Scene ${scene.id} complete. Waiting for scroll...`);
         isPlayingRef.current = false;
         isWaitingForScrollRef.current = true;
         debugState.isAutoPlaying = false;
@@ -407,7 +419,7 @@ export function useCinematicTimeline({
       const nextIndex = currentIndex + 1;
       
       if (nextIndex >= scenes.length) {
-        console.log(`[Cinematic] All scenes complete!`);
+        devLog(`[Cinematic] All scenes complete!`);
         isWaitingForScrollRef.current = false;
         debugState.waitingForScroll = false;
         debugState.canScrollBack = true; // Can still go back at the end
@@ -441,11 +453,11 @@ export function useCinematicTimeline({
       const prevIndex = currentIndex - 1;
       
       if (prevIndex < 0) {
-        console.log(`[Cinematic] Already at first scene, cannot go back`);
+        devLog(`[Cinematic] Already at first scene, cannot go back`);
         return;
       }
       
-      console.log(`[Cinematic] Going back to scene ${prevIndex + 1}`);
+      devLog(`[Cinematic] Going back to scene ${prevIndex + 1}`);
       
       // Stop current audio if playing
       const currentScene = scenes[currentIndex];
@@ -494,11 +506,11 @@ export function useCinematicTimeline({
       const nextIndex = currentIndex + 1;
       
       if (nextIndex >= scenes.length) {
-        console.log(`[Cinematic] Already at last scene, cannot skip forward`);
+        devLog(`[Cinematic] Already at last scene, cannot skip forward`);
         return;
       }
       
-      console.log(`[Cinematic] Skipping to scene ${nextIndex + 1}`);
+      devLog(`[Cinematic] Skipping to scene ${nextIndex + 1}`);
       
       // Stop current audio if playing
       const currentScene = scenes[currentIndex];
@@ -546,11 +558,11 @@ export function useCinematicTimeline({
       const prevIndex = currentIndex - 1;
       
       if (prevIndex < 0) {
-        console.log(`[Cinematic] Already at first scene, cannot go back`);
+        devLog(`[Cinematic] Already at first scene, cannot go back`);
         return;
       }
       
-      console.log(`[Cinematic] Skipping back to scene ${prevIndex + 1}`);
+      devLog(`[Cinematic] Skipping back to scene ${prevIndex + 1}`);
       
       // Stop current audio if playing
       const currentScene = scenes[currentIndex];
@@ -710,12 +722,12 @@ export function useCinematicTimeline({
       });
 
       if (scenes.length === 0) {
-        console.warn("[Cinematic] No scenes found!");
+        devWarn("[Cinematic] No scenes found!");
         initializingRef.current = false;
         return;
       }
 
-      console.log(`[Cinematic] Found ${scenes.length} scenes`);
+      devLog(`[Cinematic] Found ${scenes.length} scenes`);
       scenesRef.current = scenes;
 
       // Hide all scene content initially
@@ -734,14 +746,14 @@ export function useCinematicTimeline({
           
           audio.addEventListener("loadedmetadata", () => {
             scene.voDuration = audio.duration;
-            console.log(`[Cinematic] ${scene.id} VO duration: ${audio.duration.toFixed(1)}s`);
+            devLog(`[Cinematic] ${scene.id} VO duration: ${audio.duration.toFixed(1)}s`);
             audioMapRef.current[scene.id] = audio;
             audioSyncRegistry.registerAudio(scene.id, audio);
             resolve();
           });
           
           audio.addEventListener("error", () => {
-            console.warn(`[Cinematic] Failed to load audio for ${scene.id}`);
+            devWarn(`[Cinematic] Failed to load audio for ${scene.id}`);
             resolve();
           });
           
@@ -765,7 +777,7 @@ export function useCinematicTimeline({
 
       // Wait for audio to load, then start first scene
       Promise.all(audioLoadPromises).then(() => {
-        console.log(`[Cinematic] Audio preloaded, starting scene 1`);
+        devLog(`[Cinematic] Audio preloaded, starting scene 1`);
         gsap.delayedCall(0.3, () => {
           playScene(0);
         });

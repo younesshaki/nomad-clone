@@ -1,5 +1,5 @@
 import { Html } from "@react-three/drei";
-import type { CSSProperties, RefObject } from "react";
+import type { CSSProperties, MutableRefObject, RefObject } from "react";
 import type { NarrativeScene } from "./narrativeTypes";
 import "./NarrativeBase.css";
 
@@ -24,14 +24,18 @@ export function NarrativeOverlay({
 }: NarrativeOverlayProps) {
   const titleClass = `narrativeTitle${titleClassName ? ` ${titleClassName}` : ""}`;
   const lineClass = `narrativeLine${lineClassName ? ` ${lineClassName}` : ""}`;
+  const portalRef =
+    typeof document === "undefined"
+      ? undefined
+      : ({ current: document.body } as MutableRefObject<HTMLElement>);
 
   return (
     <Html
       fullscreen
-      portal={document.body}
+      portal={portalRef}
       style={{
         pointerEvents: "none",
-        zIndex: 200,
+        zIndex: 500,
       }}
     >
       <div 
@@ -67,7 +71,7 @@ export function NarrativeOverlay({
           >
             <div className="narrativeSceneInner">
               <div className={titleClass}>{scene.title}</div>
-              {"columns" in scene ? (
+              {"columns" in scene && scene.columns ? (
                 <>
                   <div className="sceneColumns">
                     <div className="sceneColumn column-left">

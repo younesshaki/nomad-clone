@@ -2,6 +2,18 @@ import { useEffect, useRef } from "react";
 import gsap from "gsap";
 import { audioSyncRegistry } from "./audioSync";
 
+const devLog = (...args: unknown[]) => {
+  if (import.meta.env.DEV) {
+    console.log(...args);
+  }
+};
+
+const devWarn = (...args: unknown[]) => {
+  if (import.meta.env.DEV) {
+    console.warn(...args);
+  }
+};
+
 type UseAmbientMusicOptions = {
   /** URL to the ambient music file */
   musicUrl: string | null;
@@ -48,7 +60,7 @@ export function useAmbientMusic({
     audio.preload = "auto";
     audioRef.current = audio;
 
-    console.log("[AmbientMusic] Audio element created");
+    devLog("[AmbientMusic] Audio element created");
 
     return () => {
       if (audioRef.current) {
@@ -70,13 +82,13 @@ export function useAmbientMusic({
       const startMusic = () => {
         if (!audioRef.current || isPlayingRef.current) return;
 
-        console.log("[AmbientMusic] Starting ambient music");
+        devLog("[AmbientMusic] Starting ambient music");
         isPlayingRef.current = true;
         
         audioRef.current.currentTime = 0;
         audioRef.current.volume = 0;
         audioRef.current.play().catch((err) => {
-          console.warn("[AmbientMusic] Autoplay blocked:", err);
+          devWarn("[AmbientMusic] Autoplay blocked:", err);
           isPlayingRef.current = false;
         });
 
@@ -101,7 +113,7 @@ export function useAmbientMusic({
     } else {
       // Fade out and stop
       if (audio && isPlayingRef.current) {
-        console.log("[AmbientMusic] Fading out ambient music");
+        devLog("[AmbientMusic] Fading out ambient music");
         gsap.to(audio, {
           volume: 0,
           duration: fadeOutDuration,
@@ -128,7 +140,7 @@ export function useAmbientMusic({
 
       if (voIsPlaying) {
         // Duck the music when VO starts
-        console.log("[AmbientMusic] Ducking for VO");
+        devLog("[AmbientMusic] Ducking for VO");
         gsap.to(audio, {
           volume: duckedVolume,
           duration: 0.8,
@@ -136,7 +148,7 @@ export function useAmbientMusic({
         });
       } else {
         // Restore volume when VO ends
-        console.log("[AmbientMusic] Restoring volume after VO");
+        devLog("[AmbientMusic] Restoring volume after VO");
         gsap.to(audio, {
           volume: baseVolume,
           duration: 1.2,

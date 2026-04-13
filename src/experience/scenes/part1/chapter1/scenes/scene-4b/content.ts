@@ -1,4 +1,4 @@
-import type { NarrativeScene } from "../../../shared/narrativeTypes";
+import type { NarrativeScene } from "../../../../shared/narrativeTypes";
 import { chapter1VoiceOvers } from "../../audio";
 
 export const scene4b: NarrativeScene = {

@@ -707,6 +707,10 @@ type DolphinSample = {
   size: number;
 };
 
+type SkinningShaderMaterial = THREE.ShaderMaterial & {
+  skinning?: boolean;
+};
+
 class DolphinSystem {
   private root: THREE.Group;
   private material: THREE.ShaderMaterial;
@@ -762,7 +766,7 @@ class DolphinSystem {
 
     this.dolphin.traverse((child) => {
       if (child instanceof THREE.Mesh) {
-        const meshMaterial = this.material.clone();
+        const meshMaterial = this.material.clone() as SkinningShaderMaterial;
         child.material = meshMaterial;
         
         if (child instanceof THREE.SkinnedMesh) {
@@ -828,7 +832,7 @@ class DolphinSystem {
 
     const tempPosition = new THREE.Vector3();
     const tempNormal = new THREE.Vector3();
-    const geometry = this.dolphinMesh.geometry;
+    const geometry = (this.dolphinMesh as THREE.SkinnedMesh).geometry;
     const posAttr = geometry.getAttribute("position");
 
     this.sampledData = [];
@@ -1789,9 +1793,7 @@ export default function CyberOcean({
     postProcessingRef.current?.resize(size.width, size.height);
   }, [size.width, size.height]);
 
-  useFrame((state) => {
-    // Use the delta provided by useFrame (safe) instead of clock.getDelta() (unsafe)
-    const delta = state.delta;
+  useFrame((state, delta) => {
     deltaRef.current = delta;
 
     if (!isActive) {

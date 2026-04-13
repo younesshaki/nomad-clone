@@ -1,5 +1,4 @@
-import { useMemo, type ReactNode, lazy, Suspense } from "react";
-import { parts } from "./parts";
+import { useMemo, lazy, Suspense } from "react";
 
 const Part1Chapter1 = lazy(() => import("./scenes/part1/chapter1"));
 const Part1Chapter2 = lazy(() => import("./scenes/part1/chapter2"));
@@ -45,44 +44,29 @@ export default function SceneManager({
   currentPart,
   scenesHidden = false,
 }: SceneManagerProps) {
-  const chapterCount = parts[currentPart - 1]?.chapters.length ?? 0;
   const activeKey = `part${currentPart}-chapter${currentChapter}`;
-  console.log("SceneManager rendered, part:", currentPart, "chapter:", currentChapter);
 
-  const scenesToRender = useMemo(() => {
-    const scenes: Array<{ key: string; component: ReactNode }> = [];
-
-    for (let offset = -1; offset <= 1; offset += 1) {
-      const chapterNum = currentChapter + offset;
-      if (chapterNum < 1 || chapterNum > chapterCount) {
-        continue;
-      }
-
-      const Component = getChapterComponent(currentPart, chapterNum);
-      if (!Component) {
-        continue;
-      }
-
-      const key = `part${currentPart}-chapter${chapterNum}`;
-      const isActive = key === activeKey && !scenesHidden;
-      scenes.push({
-        key,
-        component: <Component isActive={isActive} />,
-      });
+  const sceneToRender = useMemo(() => {
+    const Component = getChapterComponent(currentPart, currentChapter);
+    if (!Component) {
+      return null;
     }
 
-    return scenes;
-  }, [activeKey, chapterCount, currentChapter, currentPart, scenesHidden]);
+    return {
+      key: activeKey,
+      component: <Component isActive={!scenesHidden} />,
+    };
+  }, [activeKey, currentChapter, currentPart, scenesHidden]);
 
   return (
     <>
-      {scenesToRender.map(({ key, component }) => (
-        <group key={key} visible={key === activeKey && !scenesHidden}>
+      {sceneToRender ? (
+        <group key={sceneToRender.key} visible={!scenesHidden}>
           <Suspense fallback={null}>
-            {component}
+            {sceneToRender.component}
           </Suspense>
         </group>
-      ))}
+      ) : null}
     </>
   );
 }

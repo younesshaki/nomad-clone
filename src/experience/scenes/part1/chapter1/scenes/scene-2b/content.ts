@@ -1,4 +1,4 @@
-import type { NarrativeScene } from "../../../shared/narrativeTypes";
+import type { NarrativeScene } from "../../../../shared/narrativeTypes";
 import { chapter1VoiceOvers } from "../../audio";
 
 // Background images for scene-2b slideshow
