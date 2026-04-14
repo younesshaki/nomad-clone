@@ -1,5 +1,6 @@
 import "./App.scss";
 import { useCallback, useState } from "react";
+import { UiSoundProvider } from "./experience/audio/UiSoundProvider";
 import Experience from "./experience/Experience";
 import { StoryProvider } from "./experience/story/StoryProvider";
 import PreloadGate from "./experience/ui/PreloadGate";
@@ -34,17 +35,19 @@ export default function App() {
       overflow: "hidden",
     }}>
       <StoryProvider>
-        {screen === "gate" ? (
-          <PreloadGate onStart={handleGoHome} />
-        ) : screen === "experience" ? (
-          <Experience
-            initialPartIndex={entryPartIndex}
-            initialChapterIndex={entryChapterIndex}
-            onGoHome={handleGoHome}
-          />
-        ) : (
-          <StoryHomePage onEnter={handleEnterExperience} />
-        )}
+        <UiSoundProvider>
+          {screen === "gate" ? (
+            <PreloadGate onStart={handleGoHome} />
+          ) : screen === "experience" ? (
+            <Experience
+              initialPartIndex={entryPartIndex}
+              initialChapterIndex={entryChapterIndex}
+              onGoHome={handleGoHome}
+            />
+          ) : (
+            <StoryHomePage onEnter={handleEnterExperience} />
+          )}
+        </UiSoundProvider>
       </StoryProvider>
     </div>
   );

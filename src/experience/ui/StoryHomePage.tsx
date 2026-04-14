@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { useUiSounds } from "../audio/useUiSounds";
 import { useStory } from "../story/StoryProvider";
 import {
   getPartDisplayList,
@@ -35,12 +36,24 @@ function ChapterCard({
   globalNumber: number;
   onSelect: () => void;
 }) {
+  const { playHover, playNavClick } = useUiSounds();
   const canSelect = chapter.status !== "locked";
+
+  const handleSelect = () => {
+    if (!canSelect) {
+      return;
+    }
+
+    playNavClick();
+    onSelect();
+  };
 
   return (
     <div
       className={`storyHome__chapterCard storyHome__chapterCard--${chapter.status}`}
-      onClick={canSelect ? onSelect : undefined}
+      onMouseEnter={canSelect ? playHover : undefined}
+      onFocus={canSelect ? playHover : undefined}
+      onClick={canSelect ? handleSelect : undefined}
       role={canSelect ? "button" : undefined}
       tabIndex={canSelect ? 0 : undefined}
       onKeyDown={
@@ -48,7 +61,7 @@ function ChapterCard({
           ? (e) => {
               if (e.key === "Enter" || e.key === " ") {
                 e.preventDefault();
-                onSelect();
+                handleSelect();
               }
             }
           : undefined
@@ -157,6 +170,7 @@ function UnlockablesPlaceholder() {
 /* ─── Main component ─── */
 
 export default function StoryHomePage({ onEnter }: StoryHomePageProps) {
+  const { playHover, playPrimaryClick } = useUiSounds();
   const { isReady, state } = useStory();
 
   const parts = useMemo(
@@ -182,6 +196,7 @@ export default function StoryHomePage({ onEnter }: StoryHomePageProps) {
   }, [parts]);
 
   const handlePrimaryCta = () => {
+    playPrimaryClick();
     if (resumeTarget) {
       onEnter(resumeTarget.partIndex, resumeTarget.chapterIndex);
     } else {
@@ -200,6 +215,8 @@ export default function StoryHomePage({ onEnter }: StoryHomePageProps) {
           <button
             type="button"
             className="storyHome__cta"
+            onMouseEnter={isReady ? playHover : undefined}
+            onFocus={isReady ? playHover : undefined}
             onClick={handlePrimaryCta}
             disabled={!isReady}
           >

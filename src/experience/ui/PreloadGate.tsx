@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useUiSounds } from "../audio/useUiSounds";
 import "../loaders/preloader/styles.css";
 import preloadGateVideo from "../../assets/preload/preload-gate.mp4";
 
@@ -7,9 +8,12 @@ type PreloadGateProps = {
 };
 
 export default function PreloadGate({ onStart }: PreloadGateProps) {
+  const { playGateClick, playHover } = useUiSounds();
   const videoRef = useRef<HTMLVideoElement | null>(null);
+  const startTimeoutRef = useRef<number | null>(null);
   const [videoReady, setVideoReady] = useState(false);
   const [audioEnabled, setAudioEnabled] = useState(false);
+  const [isStarting, setIsStarting] = useState(false);
 
   useEffect(() => {
     const video = videoRef.current;
@@ -41,17 +45,30 @@ export default function PreloadGate({ onStart }: PreloadGateProps) {
     };
   }, []);
 
+  useEffect(() => {
+    return () => {
+      if (startTimeoutRef.current !== null) {
+        window.clearTimeout(startTimeoutRef.current);
+      }
+    };
+  }, []);
+
   const handleStart = () => {
+    if (isStarting) {
+      return;
+    }
+
+    setIsStarting(true);
+    playGateClick();
     const video = videoRef.current;
     if (video) {
-      video.muted = false;
-      setAudioEnabled(true);
-      const playPromise = video.play();
-      if (playPromise?.catch) {
-        playPromise.catch(() => {});
-      }
+      video.muted = true;
+      setAudioEnabled(false);
     }
-    onStart();
+
+    startTimeoutRef.current = window.setTimeout(() => {
+      onStart();
+    }, 1080);
   };
 
   const handlePlayWoodz = () => {
@@ -96,9 +113,20 @@ export default function PreloadGate({ onStart }: PreloadGateProps) {
         playsInline
         preload="auto"
       />
-      <button className="preloadGateButton" type="button" onClick={handleStart}>
-        Play
-      </button>
+      <div className={`preloadGateButtonShell${isStarting ? " isStarting" : ""}`}>
+        <span className="preloadGatePulse preloadGatePulse--glow" aria-hidden="true" />
+        <span className="preloadGatePulse preloadGatePulse--ring" aria-hidden="true" />
+        <button
+          className="preloadGateButton"
+          type="button"
+          onMouseEnter={isStarting ? undefined : playHover}
+          onFocus={isStarting ? undefined : playHover}
+          onClick={handleStart}
+          disabled={isStarting}
+        >
+          Play
+        </button>
+      </div>
       <div className="preloadGateAudioControls" aria-label="Woodz audio controls">
         <input
           id="preloadGateAudioToggle"
