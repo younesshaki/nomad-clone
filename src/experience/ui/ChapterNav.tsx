@@ -7,6 +7,7 @@ interface ChapterNavProps {
   activePartIndex: number;
   activeChapterIndex: number;
   onSelectionChange: (partIndex: number, chapterIndex: number) => void;
+  onGoHome?: () => void;
 }
 
 function FancyButton({
@@ -149,6 +150,7 @@ export default function ChapterNav({
   activePartIndex,
   activeChapterIndex,
   onSelectionChange,
+  onGoHome,
 }: ChapterNavProps) {
   const [isHidden, setIsHidden] = useState(false);
   const activePart = parts[activePartIndex];
@@ -184,6 +186,9 @@ export default function ChapterNav({
 
   return (
     <div className={`chapterNav${isHidden ? " chapterNav--hidden" : ""}`}>
+      {onGoHome && (
+        <FancyButton label="Home" onClick={onGoHome} />
+      )}
       <div className="chapterNavButtonRow">
         <FancyButton
           label="Prev Part"

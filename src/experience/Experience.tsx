@@ -33,7 +33,17 @@ function DebugWrapper({ enabled }: { enabled: boolean }) {
   return enabled ? <DebugOverlay enabled={enabled} /> : null;
 }
 
-export default function Experience() {
+type ExperienceProps = {
+  initialPartIndex?: number;
+  initialChapterIndex?: number;
+  onGoHome?: () => void;
+};
+
+export default function Experience({
+  initialPartIndex: propPartIndex,
+  initialChapterIndex: propChapterIndex,
+  onGoHome,
+}: ExperienceProps = {}) {
   const devToolsEnabled = import.meta.env.DEV;
   const [debugEnabled, setDebugEnabled] = useState(false);
   const [syncPreviewEnabled, setSyncPreviewEnabled] = useState(false);
@@ -81,14 +91,19 @@ export default function Experience() {
 
   const { isLoading, progress } = useLoadingController();
   
-  // URL Hash syncing logic
-  const getInitialStateFromHash = () => {
+  // Resolve initial part/chapter from props, URL hash, or defaults
+  const getInitialState = () => {
+    // Props from homepage take priority
+    if (propPartIndex !== undefined && propChapterIndex !== undefined) {
+      return { partIndex: propPartIndex, chapterIndex: propChapterIndex };
+    }
+
+    // Fall back to URL hash
     const hash = window.location.hash;
     const match = hash.match(/#part-(\d+)-chapter-(\d+)/);
     if (match) {
       const p = parseInt(match[1], 10) - 1;
       const c = parseInt(match[2], 10) - 1;
-      // Basic bounds check (assuming parts data is available or just safe defaults)
       const partIndex = Math.max(0, Math.min(p, parts.length - 1));
       const chapterCount = parts[partIndex]?.chapters.length ?? 1;
       const chapterIndex = Math.max(0, Math.min(c, chapterCount - 1));
@@ -97,7 +112,7 @@ export default function Experience() {
     return { partIndex: 0, chapterIndex: 0 };
   };
 
-  const [initialState] = useState(getInitialStateFromHash);
+  const [initialState] = useState(getInitialState);
 
   const [fade, setFade] = useState(0);
   const [activePartIndex, setActivePartIndex] = useState(initialState.partIndex);
@@ -416,6 +431,7 @@ export default function Experience() {
             activePartIndex={activePartIndex}
             activeChapterIndex={activeChapterIndex}
             onSelectionChange={handleSelectionChange}
+            onGoHome={onGoHome}
           />
         )}
         {/* Debug panel rendered outside Canvas to avoid R3F reconciler issues */}
